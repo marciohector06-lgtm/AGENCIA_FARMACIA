@@ -1,0 +1,12 @@
+-- FASE 3/4 (correção): mesma classe de bug já corrigida em 0017 para
+-- logs_auditoria — INSERT ... RETURNING (usado pelo SQLAlchemy para ler de
+-- volta colunas geradas pelo servidor, ex.: vendas.data_venda) exige
+-- privilégio de SELECT no Postgres, não só INSERT.
+--
+-- A migration 0011 só deu agente_atendente INSERT em vendas/vendas_itens.
+-- A RLS de 0012 (policy sel_todos_agentes) já previa leitura para
+-- agente_atendente nessas tabelas, mas faltou o GRANT correspondente —
+-- resultado: toda confirmação de compra pelo Agente Atendente
+-- (app/agents/service.py::_run_atendimento_confirmacao) falhava com
+-- "permission denied for table vendas" ao inserir a Venda/VendaItem.
+GRANT SELECT ON vendas, vendas_itens TO agente_atendente;

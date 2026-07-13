@@ -1,0 +1,28 @@
+from app.models.agente_ia import AgenteIA
+from app.models.base import Base
+from app.models.cliente import Cliente
+from app.models.estoque import Estoque
+from app.models.fabricante import Fabricante
+from app.models.filial import Filial
+from app.models.log_auditoria import LogAuditoria
+from app.models.lote import Lote
+from app.models.precificacao_historico import PrecificacaoHistorico
+from app.models.principio_ativo import PrincipioAtivo
+from app.models.produto import Produto
+from app.models.venda import Venda, VendaItem
+
+__all__ = [
+    "AgenteIA",
+    "Base",
+    "Cliente",
+    "Estoque",
+    "Fabricante",
+    "Filial",
+    "LogAuditoria",
+    "Lote",
+    "PrecificacaoHistorico",
+    "PrincipioAtivo",
+    "Produto",
+    "Venda",
+    "VendaItem",
+]

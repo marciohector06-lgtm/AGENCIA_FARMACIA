@@ -1,0 +1,23 @@
+# Claude Code local session/config data
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env files (never commit real secrets)
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
