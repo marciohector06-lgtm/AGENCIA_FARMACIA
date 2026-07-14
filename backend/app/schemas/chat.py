@@ -13,7 +13,10 @@ class ChatAtendimentoRequest(BaseModel):
     confirmar_compra: bool = False
     produto_id: uuid.UUID | None = None
     lote_id: uuid.UUID | None = None
-    quantidade: int = 1
+    # QA-06: mesma faixa em todo schema com esse campo (0 e >999 viravam 422
+    # já antes por outro caminho em alguns endpoints; aqui não havia limite
+    # nenhum).
+    quantidade: int = Field(default=1, ge=1, le=999)
 
     # CLIN-04: perfil clínico opcional — o farmacêutico/atendente preenche o
     # que souber, nunca obrigatório. Alimenta ConsultarInteracoesTool

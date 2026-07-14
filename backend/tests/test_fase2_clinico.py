@@ -7,7 +7,6 @@ import uuid
 from datetime import date, timedelta
 
 import pytest
-from httpx import AsyncClient
 from sqlalchemy import text
 
 from app.agents.config import AgentRole

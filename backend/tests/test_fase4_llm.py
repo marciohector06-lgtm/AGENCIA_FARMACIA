@@ -146,8 +146,9 @@ def test_gate_venda_nao_confirmada_sem_pagamento_real_via_marcar_falha() -> None
 
 
 def _criar_produto_manual_llm(*, tarja: str = "isento", preco_tabela: str = "10.00") -> uuid.UUID:
-    from app.integrations.sync import _backend_session
     from sqlalchemy import text as sqltext
+
+    from app.integrations.sync import _backend_session
 
     session = _backend_session()
     try:
@@ -222,9 +223,10 @@ def test_preco_exibido_reflete_desconto_aprovado_do_lote() -> None:
     não dá pra divergir por construção."""
     from datetime import date, timedelta
 
+    from sqlalchemy import text as sqltext
+
     from app.agents.service import _validar_produto_sugerido
     from app.integrations.sync import _backend_session
-    from sqlalchemy import text as sqltext
 
     produto_id = _criar_produto_manual_llm(preco_tabela="20.00")
 

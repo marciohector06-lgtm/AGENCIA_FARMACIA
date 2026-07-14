@@ -1,11 +1,11 @@
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AnaliseEstoqueRequest(BaseModel):
     filial_id: uuid.UUID | None = None
-    dias_vencimento: int = 60
+    dias_vencimento: int = Field(default=60, ge=1, le=365)
 
 
 class DecisaoPrecificacaoResumo(BaseModel):

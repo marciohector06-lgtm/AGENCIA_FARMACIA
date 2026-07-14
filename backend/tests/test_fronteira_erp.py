@@ -370,6 +370,40 @@ def test_debitar_estoque_recusa_quando_exigir_disponibilidade_true() -> None:
 
 
 @requires_db
+async def test_confirmar_compra_acima_do_disponivel_retorna_400_nao_500(client: AsyncClient) -> None:
+    """QA-02 (FASE 6): mesmo caminho do teste acima, mas ponta a ponta pelo
+    endpoint HTTP real (POST /chat/atendimento, confirmar_compra=true) — pedir
+    mais unidades do que há em estoque tem que devolver um 400 limpo, nunca
+    um 500 vazando a exceção da camada de negócio."""
+    from app.core.rate_limit import limiter
+
+    limiter.reset()  # isola de outros testes que já bateram no limite de 10/min deste endpoint
+    cenario = await _criar_cenario_manual(client, quantidade_inicial=2)
+
+    resp = await client.post(
+        "/api/v1/chat/atendimento",
+        json={
+            "filial_id": str(cenario["filial_id"]),
+            "mensagem": "quero comprar mais do que tem em estoque",
+            "confirmar_compra": True,
+            "produto_id": str(cenario["produto_id"]),
+            "lote_id": str(cenario["lote_id"]),
+            "quantidade": 999,
+        },
+    )
+    assert resp.status_code == 400, resp.text
+    assert "Estoque insuficiente" in resp.json()["detail"]
+
+    from sqlalchemy import text
+
+    with agent_session(AgentRole.ORQUESTRADOR) as session:
+        quantidade_final = session.execute(
+            text("SELECT quantidade_atual FROM estoque WHERE id = :id"), {"id": str(cenario["estoque_id"])}
+        ).scalar_one()
+    assert quantidade_final == 2  # nada foi debitado
+
+
+@requires_db
 async def test_debitar_estoque_concorrente_nao_gera_500_do_check(client: AsyncClient) -> None:
     """Resposta à pergunta 3: dois 'clientes' disputando a última unidade —
     um consegue, o outro recebe ValueError limpo (nunca uma violação de CHECK

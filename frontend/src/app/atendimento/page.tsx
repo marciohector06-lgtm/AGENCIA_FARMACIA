@@ -19,7 +19,11 @@ interface ChatMessage {
 
 export default function AtendimentoPage() {
   const filiais = useOptions("/filiais", "nome");
+  const clientes = useOptions("/clientes", "nome");
   const [filialId, setFilialId] = useState("");
+  // QA-05: identificação do cliente é opcional — atendimento anônimo
+  // continua funcionando sem selecionar nada aqui.
+  const [clienteId, setClienteId] = useState("");
   const [sessaoId, setSessaoId] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -66,6 +70,7 @@ export default function AtendimentoPage() {
       const resp = await api.post<ChatAtendimentoResponse>("/chat/atendimento", {
         sessao_id: sessaoId,
         filial_id: filialId,
+        cliente_id: clienteId || undefined,
         mensagem: texto,
         confirmar_compra: false,
         ...perfilClinicoPayload(),
@@ -89,7 +94,7 @@ export default function AtendimentoPage() {
     }
   }
 
-  async function confirmarCompra(produto: ProdutoSugerido) {
+  async function confirmarCompra(produto: ProdutoSugerido, quantidade: number) {
     if (!filialId || !sessaoId) return;
     setLoading(true);
     setErro(null);
@@ -97,10 +102,11 @@ export default function AtendimentoPage() {
       const resp = await api.post<ChatAtendimentoResponse>("/chat/atendimento", {
         sessao_id: sessaoId,
         filial_id: filialId,
-        mensagem: `Confirmo a compra de ${produto.nome_comercial}.`,
+        cliente_id: clienteId || undefined,
+        mensagem: `Confirmo a compra de ${quantidade}x ${produto.nome_comercial}.`,
         confirmar_compra: true,
         produto_id: produto.produto_id,
-        quantidade: 1,
+        quantidade,
       });
       pushMessage({
         id: crypto.randomUUID(),
@@ -130,19 +136,33 @@ export default function AtendimentoPage() {
         </p>
       </div>
 
-      <div className="w-64">
-        <SelectInput
-          value={filialId}
-          onChange={(e) => setFilialId(e.target.value)}
-          disabled={mensagens.length > 0}
-        >
-          <option value="">Selecione a filial...</option>
-          {filiais.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </SelectInput>
+      <div className="flex gap-3">
+        <div className="w-64">
+          <SelectInput
+            value={filialId}
+            onChange={(e) => setFilialId(e.target.value)}
+            disabled={mensagens.length > 0}
+          >
+            <option value="">Selecione a filial...</option>
+            {filiais.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </SelectInput>
+        </div>
+        <div className="w-64">
+          {/* QA-05: opcional — atendimento anônimo continua funcionando sem
+              selecionar um cliente. */}
+          <SelectInput value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
+            <option value="">Cliente não identificado</option>
+            {clientes.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </SelectInput>
+        </div>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white">
@@ -237,7 +257,7 @@ function ChatBubble({
   disabled,
 }: {
   msg: ChatMessage;
-  onConfirmar: (produto: ProdutoSugerido) => void;
+  onConfirmar: (produto: ProdutoSugerido, quantidade: number) => void;
   disabled: boolean;
 }) {
   const isUser = msg.role === "user";
@@ -263,28 +283,63 @@ function ChatBubble({
       {msg.produtos && msg.produtos.length > 0 && (
         <div className="mt-2 flex flex-col gap-2">
           {msg.produtos.map((p) => (
-            <div
-              key={p.produto_id}
-              className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-2"
-            >
-              <div>
-                <p className="text-sm font-medium text-slate-800">{p.nome_comercial}</p>
-                <p className="text-xs text-slate-500">
-                  {p.disponivel ? "Disponível em estoque" : "Sem estoque"} · R$ {p.preco.toFixed(2)}
-                </p>
-                <p className="text-xs text-slate-400">{p.motivo_sugestao}</p>
-              </div>
-              <Button
-                variant="secondary"
-                disabled={disabled || !p.disponivel}
-                onClick={() => onConfirmar(p)}
-              >
-                Confirmar compra
-              </Button>
-            </div>
+            <ProdutoSugeridoCard key={p.produto_id} produto={p} disabled={disabled} onConfirmar={onConfirmar} />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// QA-05: quantidade era fixa em 1 no payload de confirmação — agora é
+// editável por produto sugerido, validada no frontend (inteiro 1-999) antes
+// de habilitar o botão de confirmar.
+const QUANTIDADE_MIN = 1;
+const QUANTIDADE_MAX = 999;
+
+function ProdutoSugeridoCard({
+  produto,
+  disabled,
+  onConfirmar,
+}: {
+  produto: ProdutoSugerido;
+  disabled: boolean;
+  onConfirmar: (produto: ProdutoSugerido, quantidade: number) => void;
+}) {
+  const [quantidadeInput, setQuantidadeInput] = useState("1");
+  const quantidade = Number(quantidadeInput);
+  const quantidadeValida =
+    Number.isInteger(quantidade) && quantidade >= QUANTIDADE_MIN && quantidade <= QUANTIDADE_MAX;
+
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-2">
+      <div>
+        <p className="text-sm font-medium text-slate-800">{produto.nome_comercial}</p>
+        <p className="text-xs text-slate-500">
+          {produto.disponivel ? "Disponível em estoque" : "Sem estoque"} · R$ {produto.preco.toFixed(2)}
+        </p>
+        <p className="text-xs text-slate-400">{produto.motivo_sugestao}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <TextInput
+          type="number"
+          min={QUANTIDADE_MIN}
+          max={QUANTIDADE_MAX}
+          step={1}
+          value={quantidadeInput}
+          onChange={(e) => setQuantidadeInput(e.target.value)}
+          disabled={disabled || !produto.disponivel}
+          className="w-20"
+          aria-label={`Quantidade de ${produto.nome_comercial}`}
+        />
+        <Button
+          variant="secondary"
+          disabled={disabled || !produto.disponivel || !quantidadeValida}
+          onClick={() => onConfirmar(produto, quantidade)}
+        >
+          Confirmar compra
+        </Button>
+      </div>
     </div>
   );
 }

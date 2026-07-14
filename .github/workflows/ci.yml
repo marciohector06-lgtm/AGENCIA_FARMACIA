@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      # QA-04: escopo intencionalmente restrito aos módulos novos da FASE 6
+      # (backend/pyproject.toml -> [tool.mypy] files = ["alembic"]) — não
+      # força tipagem retroativa no resto de app/.
+      - run: mypy
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Imagem oficial do Supabase: só ela traz pgvector + pg_cron já
+        # habilitados via shared_preload_libraries, exigidos pelas migrations
+        # 0001/0013. Postgres genérico não sobe (CREATE EXTENSION pg_cron
+        # falha sem esse preload).
+        image: supabase/postgres:15.6.1.146
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+
+      - name: Aplica migrations (Alembic) — banco novo, roda a baseline 0001 do zero
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
+          JWT_SECRET_KEY: ci-placeholder-key
+        run: alembic upgrade head
+
+      - name: Roda a suíte de testes
+        env:
+          # app_backend e as 4 roles de agente vêm de 0011_roles_grants.sql
+          # (senhas placeholder CHANGE_ME_* — só existem neste Postgres
+          # descartável do job, nunca em produção).
+          DATABASE_URL: postgresql+asyncpg://app_backend:CHANGE_ME_BACKEND@localhost:5432/postgres
+          TEST_DATABASE_URL: postgresql+asyncpg://app_backend:CHANGE_ME_BACKEND@localhost:5432/postgres
+          DATABASE_URL_AGENTE_ATENDENTE: postgresql+psycopg2://agente_atendente:CHANGE_ME_ATENDENTE@localhost:5432/postgres
+          DATABASE_URL_AGENTE_ESTOQUE: postgresql+psycopg2://agente_estoque:CHANGE_ME_ESTOQUE@localhost:5432/postgres
+          DATABASE_URL_AGENTE_FINANCEIRO: postgresql+psycopg2://agente_financeiro:CHANGE_ME_FINANCEIRO@localhost:5432/postgres
+          DATABASE_URL_AGENTE_ORQUESTRADOR: postgresql+psycopg2://agente_orquestrador:CHANGE_ME_ORQUESTRADOR@localhost:5432/postgres
+          DB_SSL_REQUIRE: "false"
+          JWT_SECRET_KEY: ci-placeholder-key
+          GEMINI_API_KEY: ""
+          GROQ_API_KEY: ""
+        # python -m pytest (não só `pytest`): precisa que backend/ esteja em
+        # sys.path pra `import app` funcionar — python -m garante isso
+        # inserindo o cwd; o entrypoint bare `pytest` não.
+        run: python -m pytest -q

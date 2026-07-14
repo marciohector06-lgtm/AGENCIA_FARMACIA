@@ -8,10 +8,14 @@ import uuid
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import text
+from sqlalchemy.exc import ProgrammingError
 
 from app.agents.config import AgentRole
 from app.agents.db_sync import agent_session
+from app.agents.registry import agente_id_for
 from app.core.security import criar_access_token
+from app.integrations.sync import _backend_session
 
 requires_db = pytest.mark.skipif(
     not os.getenv("TEST_DATABASE_URL"), reason="TEST_DATABASE_URL não configurada"
@@ -238,6 +242,73 @@ async def test_listagem_limit_100_e_aceito(client: AsyncClient) -> None:
     assert resp.status_code == 200
 
 
+# ---------------------------------------------------------------------------
+# QA-06 (FASE 6): quantidade (1-999) e dias_vencimento (1-365) em todo schema
+# que tem esses campos — 0 e valores acima do teto têm que virar 422 da
+# validação do Pydantic, nunca cair na lógica de negócio e virar 500.
+# ---------------------------------------------------------------------------
+
+
+@requires_db
+async def test_quantidade_zero_no_atendimento_retorna_422_nao_500(client: AsyncClient) -> None:
+    payload = {
+        "filial_id": str(uuid.uuid4()),
+        "mensagem": "teste QA-06",
+        "confirmar_compra": True,
+        "produto_id": str(uuid.uuid4()),
+        "quantidade": 0,
+    }
+    resp = await client.post("/api/v1/chat/atendimento", json=payload)
+    assert resp.status_code == 422, resp.text
+
+
+@requires_db
+async def test_quantidade_acima_de_999_no_atendimento_retorna_422(client: AsyncClient) -> None:
+    payload = {
+        "filial_id": str(uuid.uuid4()),
+        "mensagem": "teste QA-06",
+        "confirmar_compra": True,
+        "produto_id": str(uuid.uuid4()),
+        "quantidade": 1000,
+    }
+    resp = await client.post("/api/v1/chat/atendimento", json=payload)
+    assert resp.status_code == 422, resp.text
+
+
+@requires_db
+async def test_quantidade_999_no_atendimento_e_aceita_pela_validacao(client: AsyncClient) -> None:
+    """999 é o teto válido — a rejeição tem que vir só da regra de negócio
+    (estoque insuficiente, produto inexistente etc.), nunca da validação de
+    schema. Aqui não há cenário montado, então o esperado é só NÃO ser 422."""
+    payload = {
+        "filial_id": str(uuid.uuid4()),
+        "mensagem": "teste QA-06",
+        "confirmar_compra": True,
+        "produto_id": str(uuid.uuid4()),
+        "quantidade": 999,
+    }
+    resp = await client.post("/api/v1/chat/atendimento", json=payload)
+    assert resp.status_code != 422, resp.text
+
+
+@requires_db
+async def test_dias_vencimento_zero_na_analise_estoque_retorna_422(client: AsyncClient) -> None:
+    from app.core.rate_limit import limiter
+
+    limiter.reset()  # isola de outros testes que já bateram no limite de 3/min deste endpoint
+    resp = await client.post("/api/v1/agentes/analise-estoque", json={"dias_vencimento": 0})
+    assert resp.status_code == 422, resp.text
+
+
+@requires_db
+async def test_dias_vencimento_acima_de_365_na_analise_estoque_retorna_422(client: AsyncClient) -> None:
+    from app.core.rate_limit import limiter
+
+    limiter.reset()
+    resp = await client.post("/api/v1/agentes/analise-estoque", json={"dias_vencimento": 366})
+    assert resp.status_code == 422, resp.text
+
+
 @requires_db
 async def test_mensagem_acima_de_2000_caracteres_e_rejeitada(client: AsyncClient) -> None:
     payload = {"filial_id": str(uuid.uuid4()), "mensagem": "a" * 2001}
@@ -277,3 +348,67 @@ def test_funcoes_security_definer_tem_search_path_fixo() -> None:
         assert proconfig is not None and any(cfg.startswith("search_path=") for cfg in proconfig), (
             f"{proname} sem search_path fixo: {proconfig}"
         )
+
+
+# ---------------------------------------------------------------------------
+# logs_auditoria: append-only (0008/0011) + visibilidade só da própria linha
+# por agente (0017) — QA-02 (FASE 6).
+# ---------------------------------------------------------------------------
+
+
+def _inserir_log_auditoria_como(role: AgentRole) -> uuid.UUID:
+    with agent_session(role) as session:
+        return session.execute(
+            text(
+                "INSERT INTO logs_auditoria (agente_id, tipo_decisao, entidade_afetada, decisao_tomada, dados_base) "
+                "VALUES (:agente_id, 'sugestao_similar', 'produtos', 'log de teste QA-02', '{}'::jsonb) "
+                "RETURNING id"
+            ),
+            {"agente_id": str(agente_id_for(role))},
+        ).scalar_one()
+
+
+@requires_db
+def test_ninguem_consegue_update_delete_em_logs_auditoria() -> None:
+    """logs_auditoria é somente-inserção por decisão (0008/0011): nenhuma role
+    — nem app_backend, nem os próprios agentes que inseriram a linha —
+    recebeu UPDATE/DELETE."""
+    log_id = _inserir_log_auditoria_como(AgentRole.ATENDENTE)
+
+    backend = _backend_session()
+    try:
+        with pytest.raises(ProgrammingError, match="permission denied"):
+            backend.execute(text("UPDATE logs_auditoria SET decisao_tomada = 'alterado' WHERE id = :id"), {"id": str(log_id)})
+        backend.rollback()
+
+        with pytest.raises(ProgrammingError, match="permission denied"):
+            backend.execute(text("DELETE FROM logs_auditoria WHERE id = :id"), {"id": str(log_id)})
+        backend.rollback()
+    finally:
+        backend.close()
+
+    with agent_session(AgentRole.ATENDENTE) as session:
+        with pytest.raises(ProgrammingError, match="permission denied"):
+            session.execute(text("UPDATE logs_auditoria SET decisao_tomada = 'alterado' WHERE id = :id"), {"id": str(log_id)})
+        session.rollback()
+
+
+@requires_db
+def test_agente_estoque_nao_le_logs_auditoria_de_outro_agente() -> None:
+    """RLS sel_proprio_agente (0017): agente_estoque tem GRANT SELECT na
+    tabela inteira, mas a policy só deixa ver as próprias linhas
+    (agente_id = current_agente_id()) — uma linha gravada pelo atendente
+    tem que ficar invisível pra ele."""
+    log_id = _inserir_log_auditoria_como(AgentRole.ATENDENTE)
+
+    with agent_session(AgentRole.GERENTE_ESTOQUE) as session:
+        visto_por_outro_agente = session.execute(
+            text("SELECT id FROM logs_auditoria WHERE id = :id"), {"id": str(log_id)}
+        ).first()
+    assert visto_por_outro_agente is None
+
+    with agent_session(AgentRole.ATENDENTE) as session:
+        visto_pelo_proprio_agente = session.execute(
+            text("SELECT id FROM logs_auditoria WHERE id = :id"), {"id": str(log_id)}
+        ).first()
+    assert visto_pelo_proprio_agente is not None
