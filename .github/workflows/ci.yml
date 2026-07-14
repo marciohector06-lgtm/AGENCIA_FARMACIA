@@ -79,4 +79,7 @@ jobs:
           JWT_SECRET_KEY: ci-placeholder-key
           GEMINI_API_KEY: ""
           GROQ_API_KEY: ""
-        run: pytest -q
+        # python -m pytest (não só `pytest`): precisa que backend/ esteja em
+        # sys.path pra `import app` funcionar — python -m garante isso
+        # inserindo o cwd; o entrypoint bare `pytest` não.
+        run: python -m pytest -q
