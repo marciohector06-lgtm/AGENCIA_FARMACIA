@@ -259,7 +259,7 @@ export default function AtendimentoPage() {
       <div className="flex flex-1 flex-col overflow-y-auto rounded-lg border border-slate-200 bg-white p-5">
         {mensagens.length === 0 && (
           <div className="flex flex-1 items-center justify-center text-center text-sm text-slate-400">
-            💊 Descreva um sintoma ou peça um produto para começar a conversa.
+            Descreva um sintoma ou peça um produto para começar a conversa.
           </div>
         )}
         <div className="flex flex-col gap-4">

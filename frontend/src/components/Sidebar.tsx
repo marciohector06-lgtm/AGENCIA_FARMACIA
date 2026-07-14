@@ -41,7 +41,6 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-slate-900 text-slate-200">
       <div className="flex items-center gap-2 px-5 py-5">
-        <span className="text-xl">💊</span>
         <div>
           <p className="text-sm font-semibold text-white">Farmácia MAS</p>
           <p className="text-xs text-slate-400">Painel de gestão</p>
