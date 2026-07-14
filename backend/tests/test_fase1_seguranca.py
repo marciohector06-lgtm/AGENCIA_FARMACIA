@@ -242,6 +242,73 @@ async def test_listagem_limit_100_e_aceito(client: AsyncClient) -> None:
     assert resp.status_code == 200
 
 
+# ---------------------------------------------------------------------------
+# QA-06 (FASE 6): quantidade (1-999) e dias_vencimento (1-365) em todo schema
+# que tem esses campos — 0 e valores acima do teto têm que virar 422 da
+# validação do Pydantic, nunca cair na lógica de negócio e virar 500.
+# ---------------------------------------------------------------------------
+
+
+@requires_db
+async def test_quantidade_zero_no_atendimento_retorna_422_nao_500(client: AsyncClient) -> None:
+    payload = {
+        "filial_id": str(uuid.uuid4()),
+        "mensagem": "teste QA-06",
+        "confirmar_compra": True,
+        "produto_id": str(uuid.uuid4()),
+        "quantidade": 0,
+    }
+    resp = await client.post("/api/v1/chat/atendimento", json=payload)
+    assert resp.status_code == 422, resp.text
+
+
+@requires_db
+async def test_quantidade_acima_de_999_no_atendimento_retorna_422(client: AsyncClient) -> None:
+    payload = {
+        "filial_id": str(uuid.uuid4()),
+        "mensagem": "teste QA-06",
+        "confirmar_compra": True,
+        "produto_id": str(uuid.uuid4()),
+        "quantidade": 1000,
+    }
+    resp = await client.post("/api/v1/chat/atendimento", json=payload)
+    assert resp.status_code == 422, resp.text
+
+
+@requires_db
+async def test_quantidade_999_no_atendimento_e_aceita_pela_validacao(client: AsyncClient) -> None:
+    """999 é o teto válido — a rejeição tem que vir só da regra de negócio
+    (estoque insuficiente, produto inexistente etc.), nunca da validação de
+    schema. Aqui não há cenário montado, então o esperado é só NÃO ser 422."""
+    payload = {
+        "filial_id": str(uuid.uuid4()),
+        "mensagem": "teste QA-06",
+        "confirmar_compra": True,
+        "produto_id": str(uuid.uuid4()),
+        "quantidade": 999,
+    }
+    resp = await client.post("/api/v1/chat/atendimento", json=payload)
+    assert resp.status_code != 422, resp.text
+
+
+@requires_db
+async def test_dias_vencimento_zero_na_analise_estoque_retorna_422(client: AsyncClient) -> None:
+    from app.core.rate_limit import limiter
+
+    limiter.reset()  # isola de outros testes que já bateram no limite de 3/min deste endpoint
+    resp = await client.post("/api/v1/agentes/analise-estoque", json={"dias_vencimento": 0})
+    assert resp.status_code == 422, resp.text
+
+
+@requires_db
+async def test_dias_vencimento_acima_de_365_na_analise_estoque_retorna_422(client: AsyncClient) -> None:
+    from app.core.rate_limit import limiter
+
+    limiter.reset()
+    resp = await client.post("/api/v1/agentes/analise-estoque", json={"dias_vencimento": 366})
+    assert resp.status_code == 422, resp.text
+
+
 @requires_db
 async def test_mensagem_acima_de_2000_caracteres_e_rejeitada(client: AsyncClient) -> None:
     payload = {"filial_id": str(uuid.uuid4()), "mensagem": "a" * 2001}
