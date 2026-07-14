@@ -1,5 +1,11 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1";
 
+// LLM-05: sem isso um crew.kickoff() lento no backend deixa o cliente
+// esperando indefinidamente, sem nenhum feedback — o backend já tem seu
+// próprio timeout (CREW_TIMEOUT_SECONDS), mas o fetch do navegador não tem
+// limite embutido nenhum.
+const REQUEST_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_REQUEST_TIMEOUT_MS ?? 100000);
+
 export class ApiError extends Error {
   status: number;
   detail: string;
@@ -8,6 +14,12 @@ export class ApiError extends Error {
     super(detail);
     this.status = status;
     this.detail = detail;
+  }
+}
+
+export class ApiTimeoutError extends Error {
+  constructor() {
+    super("A solicitação demorou demais para responder. Tente novamente em instantes.");
   }
 }
 
@@ -35,13 +47,27 @@ function stringifyDetail(detail: unknown): string | undefined {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiTimeoutError();
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     let detail = response.statusText;

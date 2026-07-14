@@ -7,3 +7,16 @@ pydantic>=2.9,<3.0
 pydantic-settings>=2.5,<3.0
 python-dotenv>=1.0,<2.0
 crewai[google-genai]>=1.15,<2.0
+
+# FASE 1: autenticação (SEC-01) e rate limiting (SEC-02).
+python-jose[cryptography]>=3.3,<4.0
+passlib[bcrypt]>=1.7,<2.0
+# Pin necessário: passlib 1.7.4 (última release, 2020) detecta a versão do
+# bcrypt via um atributo (bcrypt.__about__) removido a partir do bcrypt 4.1,
+# e quebra na inicialização do CryptContext. bcrypt 4.0.x é o mais recente
+# ainda compatível. https://github.com/pyca/bcrypt/issues/684
+bcrypt==4.0.1
+slowapi>=0.1.9,<0.2
+
+# FASE 4 (LLM-09): TTLCache para agente_id_for — lru_cache não expirava nunca.
+cachetools>=5.5,<6.0

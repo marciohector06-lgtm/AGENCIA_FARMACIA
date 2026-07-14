@@ -22,6 +22,7 @@ export default function FiliaisPage() {
       allowDelete
       createFields={fields}
       editFields={fields}
+      isRowEditable={(f) => f.origem === "manual"}
       columns={[
         { key: "nome", label: "Nome" },
         { key: "cidade", label: "Cidade" },
@@ -30,6 +31,11 @@ export default function FiliaisPage() {
           key: "ativo",
           label: "Status",
           render: (f) => <Badge color={f.ativo ? "green" : "slate"}>{f.ativo ? "Ativa" : "Inativa"}</Badge>,
+        },
+        {
+          key: "origem",
+          label: "Origem",
+          render: (f) => <Badge color={f.origem === "manual" ? "blue" : "slate"}>{f.origem}</Badge>,
         },
       ]}
     />

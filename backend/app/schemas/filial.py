@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -29,3 +30,6 @@ class FilialRead(FilialBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    id_externo: str | None = None
+    origem: str
+    sincronizado_em: datetime | None = None

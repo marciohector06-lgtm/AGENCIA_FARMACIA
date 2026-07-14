@@ -8,9 +8,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
 from app.models.enums import StatusLoteEnum, pg_enum
+from app.models.mixins import OrigemErpMixin
 
 
-class Lote(Base):
+class Lote(OrigemErpMixin, Base):
     __tablename__ = "lotes"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

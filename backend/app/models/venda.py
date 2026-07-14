@@ -7,10 +7,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
-from app.models.enums import CanalVendaEnum, pg_enum
+from app.models.enums import CanalVendaEnum, StatusConfirmacaoVendaEnum, pg_enum
+from app.models.mixins import OrigemErpMixin
 
 
-class Venda(Base):
+class Venda(OrigemErpMixin, Base):
     __tablename__ = "vendas"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -27,6 +28,13 @@ class Venda(Base):
     valor_total: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     forma_pagamento: Mapped[str | None] = mapped_column(String(30))
     data_venda: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    # Outbox (F0-06): nasce 'pendente' antes de qualquer chamada ao ERP.
+    status_confirmacao: Mapped[StatusConfirmacaoVendaEnum] = mapped_column(
+        pg_enum(StatusConfirmacaoVendaEnum, "status_confirmacao_venda_enum"),
+        nullable=False,
+        default=StatusConfirmacaoVendaEnum.pendente,
+    )
+    idempotency_key: Mapped[str | None] = mapped_column(String(100), unique=True)
 
 
 class VendaItem(Base):

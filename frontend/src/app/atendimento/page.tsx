@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, ApiTimeoutError } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
-import { SelectInput, TextInput } from "@/components/ui/Field";
+import { FieldWrapper, SelectInput, TextInput } from "@/components/ui/Field";
 import { useOptions } from "@/lib/hooks";
 import { ChatAtendimentoResponse, ProdutoSugerido } from "@/lib/types";
 
@@ -13,6 +13,8 @@ interface ChatMessage {
   text: string;
   produtos?: ProdutoSugerido[];
   vendaId?: string | null;
+  // CLIN-06: renderizado separado do texto da resposta, nunca misturado.
+  disclaimer?: string;
 }
 
 export default function AtendimentoPage() {
@@ -24,8 +26,27 @@ export default function AtendimentoPage() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  // CLIN-04: perfil clínico opcional — nunca obrigatório pra conversar.
+  const [perfilAberto, setPerfilAberto] = useState(false);
+  const [medicamentosEmUso, setMedicamentosEmUso] = useState("");
+  const [gestante, setGestante] = useState(false);
+  const [lactante, setLactante] = useState(false);
+  const [idade, setIdade] = useState("");
+
   function pushMessage(msg: ChatMessage) {
     setMensagens((prev) => [...prev, msg]);
+  }
+
+  function perfilClinicoPayload() {
+    return {
+      medicamentos_em_uso: medicamentosEmUso
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean),
+      gestante,
+      lactante,
+      idade: idade ? Number(idade) : null,
+    };
   }
 
   async function enviarMensagem() {
@@ -47,11 +68,22 @@ export default function AtendimentoPage() {
         filial_id: filialId,
         mensagem: texto,
         confirmar_compra: false,
+        ...perfilClinicoPayload(),
       });
       setSessaoId(resp.sessao_id);
-      pushMessage({ id: crypto.randomUUID(), role: "avatar", text: resp.resposta, produtos: resp.produtos_sugeridos });
+      pushMessage({
+        id: crypto.randomUUID(),
+        role: "avatar",
+        text: resp.resposta,
+        produtos: resp.produtos_sugeridos,
+        disclaimer: resp.disclaimer,
+      });
     } catch (err) {
-      setErro(err instanceof ApiError ? err.detail : "O Avatar não conseguiu responder agora.");
+      if (err instanceof ApiTimeoutError) {
+        setErro(err.message);
+      } else {
+        setErro(err instanceof ApiError ? err.detail : "O Avatar não conseguiu responder agora.");
+      }
     } finally {
       setLoading(false);
     }
@@ -75,9 +107,14 @@ export default function AtendimentoPage() {
         role: "avatar",
         text: resp.resposta,
         vendaId: resp.venda_id,
+        disclaimer: resp.disclaimer,
       });
     } catch (err) {
-      setErro(err instanceof ApiError ? err.detail : "Não foi possível confirmar a compra.");
+      if (err instanceof ApiTimeoutError) {
+        setErro(err.message);
+      } else {
+        setErro(err instanceof ApiError ? err.detail : "Não foi possível confirmar a compra.");
+      }
     } finally {
       setLoading(false);
     }
@@ -106,6 +143,51 @@ export default function AtendimentoPage() {
             </option>
           ))}
         </SelectInput>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white">
+        <button
+          type="button"
+          onClick={() => setPerfilAberto((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium text-slate-700"
+        >
+          Perfil clínico (opcional — preencha o que souber)
+          <span className="text-slate-400">{perfilAberto ? "▲" : "▼"}</span>
+        </button>
+        {perfilAberto && (
+          <div className="grid grid-cols-2 gap-3 border-t border-slate-100 px-4 py-3 sm:grid-cols-4">
+            <div className="col-span-2 sm:col-span-2">
+              <FieldWrapper label="Medicamentos em uso (separados por vírgula)" htmlFor="medicamentos-em-uso">
+                <TextInput
+                  id="medicamentos-em-uso"
+                  placeholder="ex.: varfarina, losartana"
+                  value={medicamentosEmUso}
+                  onChange={(e) => setMedicamentosEmUso(e.target.value)}
+                />
+              </FieldWrapper>
+            </div>
+            <FieldWrapper label="Idade" htmlFor="idade-cliente">
+              <TextInput
+                id="idade-cliente"
+                type="number"
+                min={0}
+                max={130}
+                value={idade}
+                onChange={(e) => setIdade(e.target.value)}
+              />
+            </FieldWrapper>
+            <div className="flex items-end gap-4 pb-2">
+              <label className="flex items-center gap-1.5 text-sm text-slate-700">
+                <input type="checkbox" checked={gestante} onChange={(e) => setGestante(e.target.checked)} />
+                Gestante
+              </label>
+              <label className="flex items-center gap-1.5 text-sm text-slate-700">
+                <input type="checkbox" checked={lactante} onChange={(e) => setLactante(e.target.checked)} />
+                Lactante
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col overflow-y-auto rounded-lg border border-slate-200 bg-white p-5">
@@ -168,6 +250,13 @@ function ChatBubble({
       >
         {msg.text}
       </div>
+      {/* CLIN-06: disclaimer sempre em destaque visual separado — nunca dentro
+          do balão de resposta, pra não se misturar com o texto do "avatar". */}
+      {!isUser && msg.disclaimer && (
+        <div className="mt-1 max-w-lg rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+          {msg.disclaimer}
+        </div>
+      )}
       {msg.vendaId && (
         <p className="mt-1 text-xs text-emerald-600">Venda registrada: {msg.vendaId}</p>
       )}

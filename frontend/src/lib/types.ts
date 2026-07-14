@@ -38,9 +38,20 @@ export type TipoDecisao =
   | "aprovacao_compra"
   | "bloqueio_venda"
   | "recomendacao_giro"
-  | "resolucao_conflito";
+  | "resolucao_conflito"
+  | "alteracao_tarja";
+export type TipoMovimentacao = "entrada" | "venda" | "ajuste" | "sincronizacao_erp";
 
-export interface Filial {
+// FASE 0: presente em produtos/lotes/estoque/filiais. origem='manual' é
+// editável pela API; qualquer outra origem (ex.: 'mock') é gerenciada por um
+// ERP e somente leitura por aqui.
+export interface OrigemErp {
+  id_externo: string | null;
+  origem: string;
+  sincronizado_em: string | null;
+}
+
+export interface Filial extends OrigemErp {
   id: string;
   nome: string;
   cnpj: string | null;
@@ -77,7 +88,7 @@ export interface PrincipioAtivo {
   contraindicacoes_gerais: string | null;
 }
 
-export interface Produto {
+export interface Produto extends OrigemErp {
   id: string;
   principio_ativo_id: string | null;
   fabricante_id: string;
@@ -96,7 +107,7 @@ export interface Produto {
   ativo: boolean;
 }
 
-export interface Lote {
+export interface Lote extends OrigemErp {
   id: string;
   produto_id: string;
   numero_lote: string;
@@ -107,13 +118,24 @@ export interface Lote {
   status: StatusLote;
 }
 
-export interface Estoque {
+export interface Estoque extends OrigemErp {
   id: string;
   filial_id: string;
   lote_id: string;
   quantidade_atual: number;
   quantidade_reservada: number;
   localizacao_gondola: string | null;
+}
+
+export interface MovimentacaoEstoque {
+  id: string;
+  estoque_id: string;
+  tipo: TipoMovimentacao;
+  quantidade_delta: number;
+  quantidade_resultante: number;
+  motivo: string;
+  venda_id: string | null;
+  criado_em: string;
 }
 
 export interface LogAuditoria {
@@ -181,4 +203,6 @@ export interface ChatAtendimentoResponse {
   produtos_sugeridos: ProdutoSugerido[];
   venda_id: string | null;
   log_auditoria_id: string | null;
+  // CLIN-06: texto fixo, gerado deterministicamente pelo backend (nunca pelo LLM).
+  disclaimer: string;
 }

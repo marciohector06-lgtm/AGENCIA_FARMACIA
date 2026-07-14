@@ -33,7 +33,14 @@ class AgentSettings(BaseSettings):
     # gemini-1.5-pro foi descontinuado pela Google; gemini-2.5-pro é o
     # equivalente atual em capacidade de raciocínio. Ajustável via GEMINI_MODEL.
     gemini_model: str = "gemini/gemini-2.5-pro"
+    # LLM-10: o atendente faz regra rígida + structured output em alto volume
+    # (é o endpoint com rate limit mais alto, SEC-02) — não precisa do
+    # raciocínio pesado do Pro. Gerente/financeiro/orquestrador continuam Pro.
+    gemini_model_atendente: str = "gemini/gemini-2.5-flash"
     groq_model: str = "groq/llama3-70b-8192"
+
+    # LLM-05: timeout de crew.kickoff() — ver app/agents/execucao.py.
+    crew_timeout_seconds: float = 90.0
 
     def database_url_for(self, role: AgentRole) -> str:
         return {
@@ -43,13 +50,15 @@ class AgentSettings(BaseSettings):
             AgentRole.ORQUESTRADOR: self.database_url_agente_orquestrador,
         }[role]
 
-    def llm_model_id(self) -> str:
+    def llm_model_id(self, role: AgentRole | None = None) -> str:
         if self.llm_provider == "groq":
             if not self.groq_api_key:
                 raise RuntimeError("LLM_PROVIDER=groq mas GROQ_API_KEY não está definida no .env")
             return self.groq_model
         if not self.gemini_api_key:
             raise RuntimeError("LLM_PROVIDER=gemini mas GEMINI_API_KEY não está definida no .env")
+        if role == AgentRole.ATENDENTE:
+            return self.gemini_model_atendente
         return self.gemini_model
 
 

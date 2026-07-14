@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict
@@ -31,3 +31,6 @@ class LoteRead(LoteBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    id_externo: str | None = None
+    origem: str
+    sincronizado_em: datetime | None = None

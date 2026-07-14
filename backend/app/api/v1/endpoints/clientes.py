@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.pagination import LimitQuery, SkipQuery
 from app.core.db import get_db
 from app.crud.base import CRUDBase
 from app.models.cliente import Cliente
@@ -14,7 +15,7 @@ crud_cliente = CRUDBase[Cliente, ClienteCreate, ClienteUpdate](Cliente)
 
 
 @router.get("", response_model=list[ClienteRead])
-async def listar_clientes(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)) -> list[Cliente]:
+async def listar_clientes(skip: SkipQuery = 0, limit: LimitQuery = 100, db: AsyncSession = Depends(get_db)) -> list[Cliente]:
     return await crud_cliente.get_multi(db, skip=skip, limit=limit)
 
 

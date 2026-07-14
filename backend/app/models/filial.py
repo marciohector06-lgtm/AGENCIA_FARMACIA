@@ -5,10 +5,10 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
-from app.models.mixins import TimestampMixin
+from app.models.mixins import OrigemErpMixin, TimestampMixin
 
 
-class Filial(TimestampMixin, Base):
+class Filial(OrigemErpMixin, TimestampMixin, Base):
     __tablename__ = "filiais"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

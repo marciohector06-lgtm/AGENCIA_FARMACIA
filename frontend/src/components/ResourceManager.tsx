@@ -36,6 +36,11 @@ interface ResourceManagerProps<T extends { id: string }> {
   editFields?: FieldConfig[];
   allowDelete?: boolean;
   allowCreate?: boolean;
+  // FASE 0: registros de origem != 'manual' são gerenciados por um ERP e o
+  // backend rejeita PATCH/DELETE neles (409) — escondemos as ações em vez de
+  // deixar o usuário tomar um erro.
+  isRowEditable?: (item: T) => boolean;
+  renderRowExtra?: (item: T, reload: () => Promise<void>) => React.ReactNode;
 }
 
 type FormValues = Record<string, string | boolean>;
@@ -143,6 +148,8 @@ export function ResourceManager<T extends { id: string }>({
   editFields,
   allowDelete = false,
   allowCreate = true,
+  isRowEditable = () => true,
+  renderRowExtra,
 }: ResourceManagerProps<T>) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,7 +261,7 @@ export function ResourceManager<T extends { id: string }>({
                   {col.label}
                 </th>
               ))}
-              {(editFields || allowDelete) && <th className="px-4 py-2" />}
+              {(editFields || allowDelete || renderRowExtra) && <th className="px-4 py-2" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -280,17 +287,18 @@ export function ResourceManager<T extends { id: string }>({
                       {col.render ? col.render(item) : String((item as unknown as Record<string, unknown>)[col.key] ?? "—")}
                     </td>
                   ))}
-                  {(editFields || allowDelete) && (
+                  {(editFields || allowDelete || renderRowExtra) && (
                     <td className="px-4 py-2 text-right whitespace-nowrap">
-                      {editFields && (
+                      {renderRowExtra?.(item, load)}
+                      {editFields && isRowEditable(item) && (
                         <button
                           onClick={() => openEdit(item)}
-                          className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                          className="ml-3 text-sm font-medium text-emerald-600 hover:text-emerald-700"
                         >
                           Editar
                         </button>
                       )}
-                      {allowDelete && (
+                      {allowDelete && isRowEditable(item) && (
                         <button
                           onClick={() => handleDelete(item)}
                           className="ml-3 text-sm font-medium text-red-600 hover:text-red-700"

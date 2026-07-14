@@ -6,6 +6,8 @@ from app.models.fabricante import Fabricante
 from app.models.filial import Filial
 from app.models.log_auditoria import LogAuditoria
 from app.models.lote import Lote
+from app.models.movimentacao_estoque import MovimentacaoEstoque
+from app.models.operador import Operador
 from app.models.precificacao_historico import PrecificacaoHistorico
 from app.models.principio_ativo import PrincipioAtivo
 from app.models.produto import Produto
@@ -20,6 +22,8 @@ __all__ = [
     "Filial",
     "LogAuditoria",
     "Lote",
+    "MovimentacaoEstoque",
+    "Operador",
     "PrecificacaoHistorico",
     "PrincipioAtivo",
     "Produto",

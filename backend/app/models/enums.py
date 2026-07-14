@@ -79,6 +79,23 @@ class TipoDecisaoEnum(str, enum.Enum):
     bloqueio_venda = "bloqueio_venda"
     recomendacao_giro = "recomendacao_giro"
     resolucao_conflito = "resolucao_conflito"
+    alteracao_tarja = "alteracao_tarja"  # FASE 0 (migration 0019): endpoint privilegiado de tarja
+
+
+class TipoMovimentacaoEnum(str, enum.Enum):
+    entrada = "entrada"
+    venda = "venda"
+    ajuste = "ajuste"
+    sincronizacao_erp = "sincronizacao_erp"
+
+
+class StatusConfirmacaoVendaEnum(str, enum.Enum):
+    """Outbox (F0-06): a venda nasce 'pendente' antes de qualquer chamada ao
+    ERP, e só depois vira 'confirmada' ou 'falha' — nunca o contrário."""
+
+    pendente = "pendente"
+    confirmada = "confirmada"
+    falha = "falha"
 
 
 class StatusAprovacaoEnum(str, enum.Enum):

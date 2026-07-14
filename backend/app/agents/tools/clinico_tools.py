@@ -107,3 +107,64 @@ class ConsultarRestricoesUsoTool(BaseTool):
                 {"principio_ativo_id": principio_ativo_id},
             )
             return [dict(row._mapping) for row in rows]
+
+
+class ConsultarInteracoesTool(BaseTool):
+    name: str = "consultar_interacoes"
+    description: str = (
+        "Verifica interações medicamentosas conhecidas entre o princípio ativo do produto que "
+        "você está prestes a recomendar e os medicamentos que o cliente informou já estar usando. "
+        "Recebe principio_ativo_id (do produto candidato) e medicamentos_em_uso (lista de nomes "
+        "livres, como o cliente descreveu, ex.: ['varfarina', 'losartana']). Chame SEMPRE que o "
+        "cliente tiver informado medicamentos em uso, antes de recomendar qualquer produto — "
+        "CLIN-05 bloqueia a resposta se isso não acontecer. Retorna as interações encontradas "
+        "(com gravidade) e também quais nomes da lista não foram reconhecidos na base — avise o "
+        "cliente sobre nomes não reconhecidos em vez de presumir que estão seguros."
+    )
+    role: AgentRole = AgentRole.ATENDENTE
+
+    def _run(self, principio_ativo_id: str, medicamentos_em_uso: list[str]) -> dict:
+        if not medicamentos_em_uso:
+            return {"interacoes": [], "nao_reconhecidos": []}
+
+        interacoes: list[dict] = []
+        nao_reconhecidos: list[str] = []
+        with agent_session(self.role) as session:
+            for nome in medicamentos_em_uso:
+                outro = session.execute(
+                    text("SELECT id, nome FROM principios_ativos WHERE nome ILIKE '%' || :nome || '%' LIMIT 1"),
+                    {"nome": nome},
+                ).first()
+                if outro is None:
+                    nao_reconhecidos.append(nome)
+                    continue
+                if str(outro.id) == principio_ativo_id:
+                    continue  # mesmo princípio ativo do produto sugerido, não é interação entre dois diferentes
+
+                # Ordem canônica exigida por interacoes_medicamentosas (chk_ordem_canonica,
+                # migration 0004): a_id < b_id. Comparação textual de UUID canônico
+                # (uuid.UUID minúsculo com traços nas mesmas posições) bate com a
+                # comparação nativa de UUID do Postgres.
+                a_id, b_id = sorted([principio_ativo_id, str(outro.id)])
+                interacao = session.execute(
+                    text(
+                        """
+                        SELECT gravidade, descricao, fonte
+                        FROM interacoes_medicamentosas
+                        WHERE principio_ativo_a_id = :a AND principio_ativo_b_id = :b
+                        """
+                    ),
+                    {"a": a_id, "b": b_id},
+                ).first()
+                if interacao is not None:
+                    interacoes.append(
+                        {
+                            "medicamento_em_uso": nome,
+                            "principio_ativo_reconhecido": outro.nome,
+                            "gravidade": interacao.gravidade,
+                            "descricao": interacao.descricao,
+                            "fonte": interacao.fonte,
+                        }
+                    )
+
+        return {"interacoes": interacoes, "nao_reconhecidos": nao_reconhecidos}

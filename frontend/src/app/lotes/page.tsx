@@ -41,6 +41,7 @@ export default function LotesPage() {
       endpoint="/lotes"
       createFields={createFields}
       editFields={editFields}
+      isRowEditable={(l) => l.origem === "manual"}
       columns={[
         { key: "numero_lote", label: "Nº do lote" },
         { key: "data_validade", label: "Validade" },
@@ -49,6 +50,11 @@ export default function LotesPage() {
           key: "status",
           label: "Status",
           render: (l) => <Badge color={statusColor[l.status] ?? "slate"}>{l.status}</Badge>,
+        },
+        {
+          key: "origem",
+          label: "Origem",
+          render: (l) => <Badge color={l.origem === "manual" ? "blue" : "slate"}>{l.origem}</Badge>,
         },
       ]}
     />

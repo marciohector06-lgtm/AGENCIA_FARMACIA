@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.pagination import LimitQuery, SkipQuery
 from app.core.db import get_db
 from app.crud.base import CRUDBase
+from app.crud.origem_guard import exigir_origem_editavel
 from app.models.filial import Filial
 from app.schemas.filial import FilialCreate, FilialRead, FilialUpdate
 
@@ -14,7 +16,7 @@ crud_filial = CRUDBase[Filial, FilialCreate, FilialUpdate](Filial)
 
 
 @router.get("", response_model=list[FilialRead])
-async def listar_filiais(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)) -> list[Filial]:
+async def listar_filiais(skip: SkipQuery = 0, limit: LimitQuery = 100, db: AsyncSession = Depends(get_db)) -> list[Filial]:
     return await crud_filial.get_multi(db, skip=skip, limit=limit)
 
 
@@ -42,6 +44,7 @@ async def atualizar_filial(
     filial = await crud_filial.get(db, filial_id)
     if filial is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Filial não encontrada")
+    exigir_origem_editavel(filial)
     return await crud_filial.update(db, db_obj=filial, obj_in=filial_in)
 
 
@@ -50,4 +53,5 @@ async def remover_filial(filial_id: uuid.UUID, db: AsyncSession = Depends(get_db
     filial = await crud_filial.get(db, filial_id)
     if filial is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Filial não encontrada")
+    exigir_origem_editavel(filial)
     await crud_filial.remove(db, db_obj=filial)

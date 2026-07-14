@@ -13,10 +13,10 @@ from app.models.enums import (
     ViaAdministracaoEnum,
     pg_enum,
 )
-from app.models.mixins import TimestampMixin
+from app.models.mixins import OrigemErpMixin, TimestampMixin
 
 
-class Produto(TimestampMixin, Base):
+class Produto(OrigemErpMixin, TimestampMixin, Base):
     __tablename__ = "produtos"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -48,5 +48,10 @@ class Produto(TimestampMixin, Base):
     # a fonte da verdade, a API não deve tentar escrever nela.
     tipo_liberacao: Mapped[str] = mapped_column(String(30), nullable=False, default="imediata")
     preco_tabela: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    # DEPRECADO (BUG-06): nunca mantido em dia (nada no projeto faz UPDATE
+    # nele) e nenhuma tool financeira lê mais daqui — o custo real de venda é
+    # lotes.custo_unitario (por lote, vindo do ERP via sync). Mantido só pra
+    # não quebrar relatórios/consultas existentes que ainda apontem pra cá;
+    # não usar em nenhuma decisão financeira nova.
     custo_medio: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

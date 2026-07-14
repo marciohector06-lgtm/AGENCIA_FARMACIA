@@ -21,7 +21,9 @@ class PrecificacaoHistorico(Base):
     preco_anterior: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     preco_novo: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     # percentual_desconto é GENERATED ALWAYS no Postgres (migration 0006) — não mapeado, só lido.
-    margem_resultante: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    # NUMERIC(7,2): NUMERIC(5,2) estourava em margem muito negativa (BUG-05,
+    # migration 0024) — ver financeiro_tools.py pelo clamp defensivo adicional.
+    margem_resultante: Mapped[Decimal | None] = mapped_column(Numeric(7, 2))
     motivo: Mapped[str] = mapped_column(Text, nullable=False)
     proposto_por_agente_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("agentes_ia.id"), nullable=False

@@ -21,6 +21,16 @@ def _engine_for(role: AgentRole):
         pool_pre_ping=True,
         connect_args=connect_args,
         future=True,
+        # FASE 1 (SEC-12): antes disso o pool ficava no default implícito do
+        # SQLAlchemy (5 + 10 de overflow) sem ninguém ter decidido isso de
+        # propósito. Cada agent_session() só seguraconexão pelo tempo de um
+        # bloco `with` (não a requisição HTTP inteira), então 10+10 dá folga
+        # confortável mesmo com vários chats concorrentes de IPs diferentes
+        # batendo no limite de 10/min do SEC-02 ao mesmo tempo — sem abrir
+        # pool descontroladamente grande, que só trocaria "conexão esgotada"
+        # por "Postgres sobrecarregado".
+        pool_size=10,
+        max_overflow=10,
     )
 
 

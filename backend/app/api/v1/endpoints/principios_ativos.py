@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.pagination import LimitQuery, SkipQuery
 from app.core.db import get_db
 from app.crud.base import CRUDBase
 from app.models.principio_ativo import PrincipioAtivo
@@ -15,7 +16,7 @@ crud_principio_ativo = CRUDBase[PrincipioAtivo, PrincipioAtivoCreate, PrincipioA
 
 @router.get("", response_model=list[PrincipioAtivoRead])
 async def listar_principios_ativos(
-    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
+    skip: SkipQuery = 0, limit: LimitQuery = 100, db: AsyncSession = Depends(get_db)
 ) -> list[PrincipioAtivo]:
     return await crud_principio_ativo.get_multi(db, skip=skip, limit=limit)
 

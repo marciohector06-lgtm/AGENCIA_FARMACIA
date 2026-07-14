@@ -20,11 +20,18 @@ def registrar_auditoria(
     justificativa: str | None = None,
     confianca: float | None = None,
     sessao_id: uuid.UUID | None = None,
+    modelo_llm: str | None = None,
+    tokens_totais: int | None = None,
+    latencia_ms: int | None = None,
 ) -> uuid.UUID:
     """Grava uma linha em logs_auditoria, sempre pela role do próprio agente que decidiu.
 
     Chamada deterministicamente pela camada de serviço (app/agents/service.py)
     após cada decisão autônoma — nunca depende do LLM "lembrar" de registrar.
+
+    modelo_llm/tokens_totais/latencia_ms (LLM-08/QA-03): só preenchidos por
+    chamadas originadas de uma execução de crew (ver app/agents/execucao.py)
+    — None em decisões determinísticas puras (sync, movimentação de estoque).
     """
     with agent_session(role) as session:
         log = LogAuditoria(
@@ -38,6 +45,9 @@ def registrar_auditoria(
             justificativa=justificativa,
             confianca=confianca,
             sessao_id=sessao_id,
+            modelo_llm=modelo_llm,
+            tokens_totais=tokens_totais,
+            latencia_ms=latencia_ms,
         )
         session.add(log)
         session.flush()

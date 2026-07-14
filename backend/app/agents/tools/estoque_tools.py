@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from crewai.tools import BaseTool
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app.agents.config import AgentRole
 from app.agents.db_sync import agent_session
@@ -100,12 +101,40 @@ class RegistrarPropostaDescontoTool(BaseTool):
         "Grava no banco uma PROPOSTA de desconto para um produto/lote (status='proposto'). "
         "Não altera o preço de venda — só o Agente Financeiro pode aprovar. Recebe "
         "produto_id, lote_id, preco_novo e um motivo textual claro (ex.: giro baixo + "
-        "vencimento em 12 dias)."
+        "vencimento em 12 dias). Se já existir uma proposta pendente para o mesmo lote, "
+        "devolve a proposta existente em vez de criar uma duplicada."
     )
     role: AgentRole = AgentRole.GERENTE_ESTOQUE
 
+    @staticmethod
+    def _proposta_pendente_existente(session, lote_id: str) -> dict | None:
+        row = session.execute(
+            text(
+                "SELECT id, preco_anterior, preco_novo FROM precificacao_historico "
+                "WHERE lote_id = :lote_id AND status_aprovacao = 'proposto'"
+            ),
+            {"lote_id": lote_id},
+        ).first()
+        if row is None:
+            return None
+        return {
+            "precificacao_id": str(row.id),
+            "preco_anterior": float(row.preco_anterior),
+            "preco_novo": float(row.preco_novo),
+            "status_aprovacao": "proposto",
+            "aviso": "já existia uma proposta pendente para este lote — devolvendo a existente, não criando outra",
+        }
+
     def _run(self, produto_id: str, lote_id: str, preco_novo: float, motivo: str) -> dict:
         with agent_session(self.role) as session:
+            # BUG-07: checagem otimista primeiro (evita trabalho à toa no caso
+            # comum). A garantia de verdade é o índice único parcial da
+            # migration 0025 — o try/except abaixo cobre a corrida entre duas
+            # chamadas concorrentes passando por aqui ao mesmo tempo.
+            existente = self._proposta_pendente_existente(session, lote_id)
+            if existente is not None:
+                return existente
+
             preco_atual = session.execute(
                 text("SELECT preco_tabela FROM produtos WHERE id = :id"), {"id": produto_id}
             ).scalar_one()
@@ -119,7 +148,17 @@ class RegistrarPropostaDescontoTool(BaseTool):
                 proposto_por_agente_id=agente_id_for(self.role),
             )
             session.add(proposta)
-            session.flush()
+            try:
+                session.flush()
+            except IntegrityError:
+                # Corrida real: outra chamada inseriu entre o SELECT acima e
+                # este INSERT. Nunca deixa o erro de constraint virar 500 —
+                # recupera a proposta que ganhou a corrida.
+                session.rollback()
+                existente = self._proposta_pendente_existente(session, lote_id)
+                if existente is not None:
+                    return existente
+                raise
             return {
                 "precificacao_id": str(proposta.id),
                 "preco_anterior": float(preco_atual),
