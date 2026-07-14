@@ -1,7 +1,7 @@
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, pool
 
 from alembic import context
 from app.models import Base
@@ -25,6 +25,14 @@ def _sync_db_url() -> str:
     """DATABASE_URL da app é async (postgresql+asyncpg); Alembic roda
     migrations com um driver síncrono. TEST_DATABASE_URL (usado pela suíte
     de testes e pelo CI) tem prioridade sobre DATABASE_URL quando setada.
+
+    IMPORTANTE: nunca passe essa URL por config.set_main_option()/
+    engine_from_config() — o Alembic lê alembic.ini com configparser por
+    baixo dos panos, e configparser trata "%" como caractere de
+    interpolação. Uma senha do Supabase com caracteres especiais
+    url-encoded (ex.: "@@" -> "%40%40") quebra ao ser lida de volta do
+    objeto `config`. create_engine() direto com a string, sem tocar em
+    `config`, evita esse parsing por completo.
     """
     url = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
     if not url:
@@ -36,8 +44,6 @@ def _sync_db_url() -> str:
         "postgresql://", "postgresql+psycopg2://"
     )
 
-
-config.set_main_option("sqlalchemy.url", _sync_db_url())
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -57,9 +63,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=_sync_db_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -76,11 +81,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    connectable = create_engine(_sync_db_url(), poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(

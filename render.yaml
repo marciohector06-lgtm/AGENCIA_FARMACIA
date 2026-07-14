@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: agencia-farmacia-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_AGENTE_ATENDENTE
+        sync: false
+      - key: DATABASE_URL_AGENTE_ESTOQUE
+        sync: false
+      - key: DATABASE_URL_AGENTE_FINANCEIRO
+        sync: false
+      - key: DATABASE_URL_AGENTE_ORQUESTRADOR
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini/gemini-2.5-flash
+      - key: ERP_PROVIDER
+        value: mock
+      - key: CREW_TIMEOUT_SECONDS
+        value: "90"
+      - key: DB_SSL_REQUIRE
+        value: "true"
+      - key: CORS_ORIGINS
+        sync: false
