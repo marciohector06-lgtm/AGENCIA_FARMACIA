@@ -117,7 +117,7 @@ function FieldInput({
         type="checkbox"
         checked={value as boolean}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+        className="h-4 w-4 rounded border-white/20 bg-white/[0.03] text-emerald-500 focus:ring-emerald-500/40"
       />
     );
   }
@@ -238,8 +238,8 @@ export function ResourceManager<T extends { id: string }>({
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-          {description && <p className="text-sm text-slate-500">{description}</p>}
+          <h1 className="text-xl font-semibold tracking-tight text-white">{title}</h1>
+          {description && <p className="text-sm text-slate-400">{description}</p>}
         </div>
         {allowCreate && (
           <Button onClick={() => setShowCreate(true)}>
@@ -249,51 +249,51 @@ export function ResourceManager<T extends { id: string }>({
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
+      <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#0b0d13] shadow-lg shadow-black/20">
+        <table className="min-w-full divide-y divide-white/[0.06] text-sm">
+          <thead className="bg-white/[0.02]">
             <tr>
               {columns.map((col) => (
-                <th key={col.key} className="px-4 py-2 text-left font-medium text-slate-500">
+                <th key={col.key} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                   {col.label}
                 </th>
               ))}
-              {(editFields || allowDelete || renderRowExtra) && <th className="px-4 py-2" />}
+              {(editFields || allowDelete || renderRowExtra) && <th className="px-4 py-2.5" />}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-white/[0.04]">
             {loading && (
               <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={columns.length + 1} className="px-4 py-6 text-center text-slate-500">
                   Carregando...
                 </td>
               </tr>
             )}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={columns.length + 1} className="px-4 py-6 text-center text-slate-500">
                   Nenhum registro encontrado.
                 </td>
               </tr>
             )}
             {!loading &&
               items.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50">
+                <tr key={item.id} className="transition-colors hover:bg-white/[0.03]">
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-2 text-slate-700">
+                    <td key={col.key} className="px-4 py-2.5 text-slate-300">
                       {col.render ? col.render(item) : String((item as unknown as Record<string, unknown>)[col.key] ?? "—")}
                     </td>
                   ))}
                   {(editFields || allowDelete || renderRowExtra) && (
-                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
                       {renderRowExtra?.(item, load)}
                       {editFields && isRowEditable(item) && (
                         <button
                           onClick={() => openEdit(item)}
-                          className="ml-3 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                          className="ml-3 text-sm font-medium text-emerald-400 hover:text-emerald-300"
                         >
                           Editar
                         </button>
@@ -301,7 +301,7 @@ export function ResourceManager<T extends { id: string }>({
                       {allowDelete && isRowEditable(item) && (
                         <button
                           onClick={() => handleDelete(item)}
-                          className="ml-3 text-sm font-medium text-red-600 hover:text-red-700"
+                          className="ml-3 text-sm font-medium text-red-400 hover:text-red-300"
                         >
                           Excluir
                         </button>
@@ -330,7 +330,7 @@ export function ResourceManager<T extends { id: string }>({
           }
         >
           <form id="create-form" onSubmit={handleCreate} className="flex flex-col gap-4">
-            {formError && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</div>}
+            {formError && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{formError}</div>}
             {createFields.map((field) => (
               <FieldWrapper key={field.name} label={field.label} htmlFor={field.name} required={field.required}>
                 <FieldInput
@@ -360,7 +360,7 @@ export function ResourceManager<T extends { id: string }>({
           }
         >
           <form id="edit-form" onSubmit={handleEdit} className="flex flex-col gap-4">
-            {formError && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</div>}
+            {formError && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{formError}</div>}
             {editFields.map((field) => (
               <FieldWrapper key={field.name} label={field.label} htmlFor={field.name} required={field.required}>
                 <FieldInput

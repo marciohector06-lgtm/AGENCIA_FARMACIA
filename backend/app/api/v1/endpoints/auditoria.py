@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.pagination import LimitQuery, SkipQuery
 from app.core.db import get_db
 from app.models.agente_ia import AgenteIA
 from app.models.enums import TipoDecisaoEnum
@@ -15,8 +16,8 @@ router = APIRouter(prefix="/auditoria", tags=["auditoria"])
 
 @router.get("", response_model=list[LogAuditoriaRead])
 async def listar_auditoria(
-    skip: int = 0,
-    limit: int = 50,
+    skip: SkipQuery = 0,
+    limit: LimitQuery = 50,
     tipo_decisao: TipoDecisaoEnum | None = None,
     agente_id: uuid.UUID | None = None,
     sessao_id: uuid.UUID | None = None,

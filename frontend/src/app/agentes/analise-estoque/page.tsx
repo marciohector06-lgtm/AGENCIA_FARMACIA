@@ -36,14 +36,14 @@ export default function AnaliseEstoquePage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Análise de Estoque</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Análise de Estoque</h1>
+        <p className="text-sm text-slate-400">
           Dispara o fluxo Agente Gerente de Estoque → Agente Financeiro: identifica produtos vencendo, propõe
           descontos com base em giro real de vendas, e exige aprovação financeira por margem antes de valer.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4 rounded-lg border border-slate-200 bg-white p-5">
+      <div className="flex flex-wrap items-end gap-4 rounded-xl border border-white/10 bg-[#0b0d13] p-5 shadow-lg shadow-black/20">
         <div className="w-56">
           <FieldWrapper label="Filial (opcional)" htmlFor="filial">
             <SelectInput id="filial" value={filialId} onChange={(e) => setFilialId(e.target.value)}>
@@ -73,13 +73,13 @@ export default function AnaliseEstoquePage() {
       </div>
 
       {loading && (
-        <div className="rounded-md bg-blue-50 px-4 py-3 text-sm text-blue-700">
+        <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
           Os agentes estão raciocinando com o LLM (busca de dados reais + Chain-of-Thought). Isso pode levar de 20s a
           1 minuto — não feche esta página.
         </div>
       )}
 
-      {erro && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</div>}
+      {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{erro}</div>}
 
       {resultado && (
         <div className="flex flex-col gap-4">
@@ -89,31 +89,31 @@ export default function AnaliseEstoquePage() {
             <Kpi label="Rejeitadas" value={resultado.rejeitadas} color="red" />
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="mb-2 text-sm font-semibold text-slate-700">Resumo do Orquestrador</h2>
-            <p className="text-sm text-slate-600">{resultado.resumo}</p>
+          <div className="rounded-xl border border-white/10 bg-[#0b0d13] p-5 shadow-lg shadow-black/20">
+            <h2 className="mb-2 text-sm font-semibold text-slate-200">Resumo do Orquestrador</h2>
+            <p className="text-sm text-slate-400">{resultado.resumo}</p>
           </div>
 
           {resultado.decisoes.length > 0 && (
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
+            <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#0b0d13] shadow-lg shadow-black/20">
+              <table className="min-w-full divide-y divide-white/[0.06] text-sm">
+                <thead className="bg-white/[0.02]">
                   <tr>
-                    <th className="px-4 py-2 text-left font-medium text-slate-500">Decisão</th>
-                    <th className="px-4 py-2 text-left font-medium text-slate-500">Margem resultante</th>
-                    <th className="px-4 py-2 text-left font-medium text-slate-500">Justificativa (Financeiro)</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Decisão</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Margem resultante</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Justificativa (Financeiro)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-white/[0.04]">
                   {resultado.decisoes.map((d) => (
                     <tr key={d.precificacao_id}>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-2.5">
                         <Badge color={d.aprovado ? "green" : "red"}>{d.aprovado ? "Aprovado" : "Rejeitado"}</Badge>
                       </td>
-                      <td className="px-4 py-2 text-slate-700">
+                      <td className="px-4 py-2.5 text-slate-300">
                         {d.margem_resultante !== null ? `${d.margem_resultante.toFixed(2)}%` : "—"}
                       </td>
-                      <td className="px-4 py-2 text-slate-600">{d.justificativa}</td>
+                      <td className="px-4 py-2.5 text-slate-400">{d.justificativa}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -121,9 +121,9 @@ export default function AnaliseEstoquePage() {
             </div>
           )}
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             {resultado.log_auditoria_ids.length} registro(s) gravado(s) em logs_auditoria.{" "}
-            <a href="/auditoria" className="text-emerald-600 hover:underline">
+            <a href="/auditoria" className="text-emerald-400 hover:text-emerald-300">
               Ver na trilha de auditoria
             </a>
           </p>
@@ -134,10 +134,10 @@ export default function AnaliseEstoquePage() {
 }
 
 function Kpi({ label, value, color }: { label: string; value: number; color?: "green" | "red" }) {
-  const valueColor = color === "green" ? "text-emerald-600" : color === "red" ? "text-red-600" : "text-slate-900";
+  const valueColor = color === "green" ? "text-emerald-400" : color === "red" ? "text-red-400" : "text-white";
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5">
-      <p className="text-sm text-slate-500">{label}</p>
+    <div className="rounded-xl border border-white/10 bg-[#0b0d13] p-5 shadow-lg shadow-black/20">
+      <p className="text-sm text-slate-400">{label}</p>
       <p className={`mt-1 text-3xl font-semibold ${valueColor}`}>{value}</p>
     </div>
   );

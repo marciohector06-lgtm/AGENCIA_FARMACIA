@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #05060a;
+  --surface: #0d0f16;
+  --surface-raised: #12141d;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --foreground: #e7e9ee;
+  --foreground-muted: #8b91a3;
+  --accent: #34d399;
+  --accent-strong: #10b981;
 }
 
 @theme inline {
@@ -12,15 +18,49 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border-subtle);
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
+  background: radial-gradient(ellipse 120% 80% at 15% -10%, rgba(16, 185, 129, 0.12), transparent 55%),
+    radial-gradient(ellipse 100% 60% at 100% 0%, rgba(59, 130, 246, 0.08), transparent 50%), var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: rgba(16, 185, 129, 0.35);
+  color: #fff;
+}
+
+/* Scrollbars — visible but unobtrusive, matches the dark surface palette. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+  background-clip: content-box;
 }

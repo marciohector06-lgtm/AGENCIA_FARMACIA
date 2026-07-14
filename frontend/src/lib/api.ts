@@ -1,4 +1,18 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1";
+const TOKEN_KEY = "farmacia_mas_token";
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string): void {
+  window.localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken(): void {
+  window.localStorage.removeItem(TOKEN_KEY);
+}
 
 // LLM-05: sem isso um crew.kickoff() lento no backend deixa o cliente
 // esperando indefinidamente, sem nenhum feedback — o backend já tem seu
@@ -50,6 +64,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
+  const token = getToken();
+
   let response: Response;
   try {
     response = await fetch(`${BASE_URL}${path}`, {
@@ -57,6 +73,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(init?.headers ?? {}),
       },
     });
@@ -67,6 +84,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw err;
   } finally {
     clearTimeout(timeoutId);
+  }
+
+  // Token ausente/expirado: derruba a sessão local e manda pro login, exceto
+  // quando a própria tentativa de login é que devolveu 401 (credenciais erradas).
+  if (response.status === 401 && path !== "/auth/login") {
+    clearToken();
+    if (typeof window !== "undefined") window.location.href = "/login";
   }
 
   if (!response.ok) {

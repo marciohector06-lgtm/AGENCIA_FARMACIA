@@ -28,7 +28,10 @@ async def criar_lote(lote_in: LoteCreate, db: AsyncSession = Depends(get_db)) ->
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Lote inválido: número de lote duplicado para este produto ou validade anterior à fabricação",
+            detail=(
+                "Lote inválido: verifique se o número de lote já existe para este produto, se a validade é "
+                "posterior à fabricação, e se quantidade recebida e custo unitário são maiores que zero"
+            ),
         ) from exc
 
 

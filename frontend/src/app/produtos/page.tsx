@@ -149,7 +149,7 @@ function TarjaAction({ produto, onChanged }: { produto: Produto; onChanged: () =
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="text-sm font-medium text-amber-600 hover:text-amber-700">
+      <button onClick={() => setOpen(true)} className="text-sm font-medium text-amber-400 hover:text-amber-300">
         Tarja
       </button>
       {open && (
@@ -171,7 +171,7 @@ function TarjaAction({ produto, onChanged }: { produto: Produto; onChanged: () =
             <p className="text-xs text-slate-500">
               Endpoint privilegiado e auditado — decide se o agente atendente pode enxergar este produto.
             </p>
-            {erro && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</div>}
+            {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{erro}</div>}
             <FieldWrapper label="Nova tarja" htmlFor="nova-tarja" required>
               <SelectInput id="nova-tarja" value={tarja} onChange={(e) => setTarja(e.target.value as Produto["tarja"])}>
                 {TARJA_OPTIONS.map((opt) => (

@@ -29,7 +29,11 @@ async def criar_posicao_estoque(estoque_in: EstoqueCreate, db: AsyncSession = De
     except IntegrityError as exc:
         await db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Já existe posição de estoque para este lote nesta filial"
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Posição de estoque inválida: verifique se já existe uma posição para este lote nesta filial, "
+                "e se a quantidade reservada não excede a quantidade atual"
+            ),
         ) from exc
 
 

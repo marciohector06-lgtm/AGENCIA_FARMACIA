@@ -54,20 +54,20 @@ export default function AtendimentoPage() {
   // LGPD-03: toda vez que um cliente é selecionado, checa se ele já
   // consentiu. Atendimento anônimo (clienteId vazio) nunca passa por aqui.
   useEffect(() => {
-    if (!clienteId) {
-      setConsentimentoDado(null);
-      return;
-    }
     let active = true;
-    setConsentimentoDado(null);
-    api
-      .get<Cliente>(`/clientes/${clienteId}`)
-      .then((cliente) => {
-        if (active) setConsentimentoDado(cliente.consentimento_dado);
-      })
-      .catch(() => {
-        if (active) setConsentimentoDado(null);
-      });
+    queueMicrotask(() => {
+      if (!active) return;
+      setConsentimentoDado(null);
+      if (!clienteId) return;
+      api
+        .get<Cliente>(`/clientes/${clienteId}`)
+        .then((cliente) => {
+          if (active) setConsentimentoDado(cliente.consentimento_dado);
+        })
+        .catch(() => {
+          if (active) setConsentimentoDado(null);
+        });
+    });
     return () => {
       active = false;
     };
@@ -175,8 +175,8 @@ export default function AtendimentoPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Atendimento (Avatar)</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Atendimento (Avatar)</h1>
+        <p className="text-sm text-slate-400">
           Converse com o Farmacêutico Clínico virtual — ele só sugere MIPs reais do catálogo, verifica estoque e
           busca substitutos quando necessário.
         </p>
@@ -211,17 +211,17 @@ export default function AtendimentoPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white">
+      <div className="rounded-xl border border-white/10 bg-[#0b0d13] shadow-lg shadow-black/20">
         <button
           type="button"
           onClick={() => setPerfilAberto((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium text-slate-700"
+          className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium text-slate-200"
         >
           Perfil clínico (opcional — preencha o que souber)
-          <span className="text-slate-400">{perfilAberto ? "▲" : "▼"}</span>
+          <span className="text-slate-500">{perfilAberto ? "▲" : "▼"}</span>
         </button>
         {perfilAberto && (
-          <div className="grid grid-cols-2 gap-3 border-t border-slate-100 px-4 py-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 border-t border-white/[0.06] px-4 py-3 sm:grid-cols-4">
             <div className="col-span-2 sm:col-span-2">
               <FieldWrapper label="Medicamentos em uso (separados por vírgula)" htmlFor="medicamentos-em-uso">
                 <TextInput
@@ -243,11 +243,11 @@ export default function AtendimentoPage() {
               />
             </FieldWrapper>
             <div className="flex items-end gap-4 pb-2">
-              <label className="flex items-center gap-1.5 text-sm text-slate-700">
+              <label className="flex items-center gap-1.5 text-sm text-slate-300">
                 <input type="checkbox" checked={gestante} onChange={(e) => setGestante(e.target.checked)} />
                 Gestante
               </label>
-              <label className="flex items-center gap-1.5 text-sm text-slate-700">
+              <label className="flex items-center gap-1.5 text-sm text-slate-300">
                 <input type="checkbox" checked={lactante} onChange={(e) => setLactante(e.target.checked)} />
                 Lactante
               </label>
@@ -256,9 +256,9 @@ export default function AtendimentoPage() {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto rounded-lg border border-slate-200 bg-white p-5">
+      <div className="flex flex-1 flex-col overflow-y-auto rounded-xl border border-white/10 bg-[#0b0d13] p-5 shadow-lg shadow-black/20">
         {mensagens.length === 0 && (
-          <div className="flex flex-1 items-center justify-center text-center text-sm text-slate-400">
+          <div className="flex flex-1 items-center justify-center text-center text-sm text-slate-500">
             Descreva um sintoma ou peça um produto para começar a conversa.
           </div>
         )}
@@ -267,14 +267,14 @@ export default function AtendimentoPage() {
             <ChatBubble key={msg.id} msg={msg} onConfirmar={confirmarCompra} disabled={loading || precisaConsentimento} />
           ))}
           {loading && (
-            <div className="max-w-md self-start rounded-lg bg-slate-100 px-4 py-2 text-sm text-slate-500">
+            <div className="max-w-md self-start rounded-lg bg-white/[0.05] px-4 py-2 text-sm text-slate-400">
               O Avatar está pensando...
             </div>
           )}
         </div>
       </div>
 
-      {erro && <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</div>}
+      {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{erro}</div>}
 
       <form
         onSubmit={(e) => {
@@ -307,7 +307,7 @@ export default function AtendimentoPage() {
             </Button>
           }
         >
-          <p className="text-sm text-slate-700">{AVISO_IA_TEXTO}</p>
+          <p className="text-sm text-slate-300">{AVISO_IA_TEXTO}</p>
         </Modal>
       )}
     </div>
@@ -328,7 +328,7 @@ function ChatBubble({
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
       <div
         className={`max-w-lg rounded-lg px-4 py-2 text-sm ${
-          isUser ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-800"
+          isUser ? "bg-emerald-500 text-slate-950" : "bg-white/[0.06] text-slate-200"
         }`}
       >
         {msg.text}
@@ -336,12 +336,12 @@ function ChatBubble({
       {/* CLIN-06: disclaimer sempre em destaque visual separado — nunca dentro
           do balão de resposta, pra não se misturar com o texto do "avatar". */}
       {!isUser && msg.disclaimer && (
-        <div className="mt-1 max-w-lg rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+        <div className="mt-1 max-w-lg rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">
           {msg.disclaimer}
         </div>
       )}
       {msg.vendaId && (
-        <p className="mt-1 text-xs text-emerald-600">Venda registrada: {msg.vendaId}</p>
+        <p className="mt-1 text-xs text-emerald-400">Venda registrada: {msg.vendaId}</p>
       )}
       {msg.produtos && msg.produtos.length > 0 && (
         <div className="mt-2 flex flex-col gap-2">
@@ -375,13 +375,13 @@ function ProdutoSugeridoCard({
     Number.isInteger(quantidade) && quantidade >= QUANTIDADE_MIN && quantidade <= QUANTIDADE_MAX;
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-2">
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2">
       <div>
-        <p className="text-sm font-medium text-slate-800">{produto.nome_comercial}</p>
+        <p className="text-sm font-medium text-slate-200">{produto.nome_comercial}</p>
         <p className="text-xs text-slate-500">
           {produto.disponivel ? "Disponível em estoque" : "Sem estoque"} · R$ {produto.preco.toFixed(2)}
         </p>
-        <p className="text-xs text-slate-400">{produto.motivo_sugestao}</p>
+        <p className="text-xs text-slate-600">{produto.motivo_sugestao}</p>
       </div>
       <div className="flex items-center gap-2">
         <TextInput

@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.api.v1.pagination import LimitQuery, SkipQuery
 from app.core.db import get_db
 from app.models.agente_ia import AgenteIA
 from app.models.enums import StatusAprovacaoEnum
@@ -20,8 +21,8 @@ Aprovador = aliased(AgenteIA)
 
 @router.get("", response_model=list[PrecificacaoHistoricoRead])
 async def listar_precificacao(
-    skip: int = 0,
-    limit: int = 50,
+    skip: SkipQuery = 0,
+    limit: LimitQuery = 50,
     status_aprovacao: StatusAprovacaoEnum | None = None,
     produto_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
