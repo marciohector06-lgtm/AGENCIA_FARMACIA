@@ -1,7 +1,7 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Date, String
+from sqlalchemy import Boolean, Date, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,3 +18,8 @@ class Cliente(TimestampMixin, Base):
     data_nascimento: Mapped[date | None] = mapped_column(Date)
     telefone: Mapped[str | None] = mapped_column(String(20))
     email: Mapped[str | None] = mapped_column(String(150))
+    # LGPD-03: só setado via POST /clientes/{id}/consentimento — nunca pelo
+    # PATCH genérico. consentimento_lgpd_em é o carimbo de quando o aviso de
+    # atendimento por IA foi aceito.
+    consentimento_dado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    consentimento_lgpd_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

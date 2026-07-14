@@ -30,6 +30,12 @@ class LogAuditoria(Base):
     justificativa: Mapped[str | None] = mapped_column(Text)
     confianca: Mapped[float | None] = mapped_column(Numeric(3, 2))
     sessao_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # LGPD-04: preenchido só quando a decisão envolve dado clínico de um
+    # titular identificado (request.cliente_id) — nunca cliente_id direto.
+    # Ver app/agents/pseudonimos.py.
+    pseudonimo_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("pseudonimos_titular.pseudonimo_id")
+    )
     # LLM-08/QA-03: modelo REAL que executou (resolvido em config.py na hora
     # da chamada), nunca o campo decorativo agentes_ia.modelo_llm — e dados
     # de custo/latência, sem os quais não há como decidir infraestrutura.

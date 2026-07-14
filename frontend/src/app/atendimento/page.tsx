@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ApiError, ApiTimeoutError } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { FieldWrapper, SelectInput, TextInput } from "@/components/ui/Field";
+import { Modal } from "@/components/ui/Modal";
 import { useOptions } from "@/lib/hooks";
-import { ChatAtendimentoResponse, ProdutoSugerido } from "@/lib/types";
+import { ChatAtendimentoResponse, Cliente, ProdutoSugerido } from "@/lib/types";
+
+const AVISO_IA_TEXTO =
+  "Este atendimento é realizado por inteligência artificial. Seus dados de saúde serão usados " +
+  "exclusivamente para sugerir medicamentos isentos de prescrição e serão tratados conforme nossa " +
+  "Política de Privacidade.";
 
 interface ChatMessage {
   id: string;
@@ -24,6 +30,10 @@ export default function AtendimentoPage() {
   // QA-05: identificação do cliente é opcional — atendimento anônimo
   // continua funcionando sem selecionar nada aqui.
   const [clienteId, setClienteId] = useState("");
+  // LGPD-03: null = anônimo (nenhum consentimento a checar) ou ainda
+  // carregando; false = precisa mostrar o aviso antes de liberar o chat.
+  const [consentimentoDado, setConsentimentoDado] = useState<boolean | null>(null);
+  const [enviandoConsentimento, setEnviandoConsentimento] = useState(false);
   const [sessaoId, setSessaoId] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -40,6 +50,42 @@ export default function AtendimentoPage() {
   function pushMessage(msg: ChatMessage) {
     setMensagens((prev) => [...prev, msg]);
   }
+
+  // LGPD-03: toda vez que um cliente é selecionado, checa se ele já
+  // consentiu. Atendimento anônimo (clienteId vazio) nunca passa por aqui.
+  useEffect(() => {
+    if (!clienteId) {
+      setConsentimentoDado(null);
+      return;
+    }
+    let active = true;
+    setConsentimentoDado(null);
+    api
+      .get<Cliente>(`/clientes/${clienteId}`)
+      .then((cliente) => {
+        if (active) setConsentimentoDado(cliente.consentimento_dado);
+      })
+      .catch(() => {
+        if (active) setConsentimentoDado(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [clienteId]);
+
+  async function aceitarConsentimento() {
+    setEnviandoConsentimento(true);
+    try {
+      await api.post(`/clientes/${clienteId}/consentimento`, {});
+      setConsentimentoDado(true);
+    } catch {
+      setErro("Não foi possível registrar o consentimento agora. Tente novamente.");
+    } finally {
+      setEnviandoConsentimento(false);
+    }
+  }
+
+  const precisaConsentimento = clienteId !== "" && consentimentoDado === false;
 
   function perfilClinicoPayload() {
     return {
@@ -218,7 +264,7 @@ export default function AtendimentoPage() {
         )}
         <div className="flex flex-col gap-4">
           {mensagens.map((msg) => (
-            <ChatBubble key={msg.id} msg={msg} onConfirmar={confirmarCompra} disabled={loading} />
+            <ChatBubble key={msg.id} msg={msg} onConfirmar={confirmarCompra} disabled={loading || precisaConsentimento} />
           ))}
           {loading && (
             <div className="max-w-md self-start rounded-lg bg-slate-100 px-4 py-2 text-sm text-slate-500">
@@ -241,12 +287,29 @@ export default function AtendimentoPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ex: estou com dor de cabeça e febre, o que vocês têm?"
-          disabled={loading}
+          disabled={loading || precisaConsentimento}
         />
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading || precisaConsentimento}>
           Enviar
         </Button>
       </form>
+
+      {/* LGPD-03: primeira interação com um cliente identificado que ainda
+          não consentiu — bloqueia o chat até aceitar (a garantia real é o
+          403 do backend; isto é só a UX). */}
+      {precisaConsentimento && (
+        <Modal
+          title="Antes de continuar"
+          onClose={() => setClienteId("")}
+          footer={
+            <Button onClick={aceitarConsentimento} disabled={enviandoConsentimento}>
+              {enviandoConsentimento ? "Registrando..." : "Estou de acordo"}
+            </Button>
+          }
+        >
+          <p className="text-sm text-slate-700">{AVISO_IA_TEXTO}</p>
+        </Modal>
+      )}
     </div>
   );
 }

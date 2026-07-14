@@ -11,6 +11,7 @@ from app.models.operador import Operador
 from app.models.precificacao_historico import PrecificacaoHistorico
 from app.models.principio_ativo import PrincipioAtivo
 from app.models.produto import Produto
+from app.models.pseudonimo_titular import PseudonimoTitular
 from app.models.venda import Venda, VendaItem
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "PrecificacaoHistorico",
     "PrincipioAtivo",
     "Produto",
+    "PseudonimoTitular",
     "Venda",
     "VendaItem",
 ]

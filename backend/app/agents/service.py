@@ -19,6 +19,7 @@ from app.agents.db_sync import agent_session
 from app.agents.execucao import ExecucaoCrew, executar_crew
 from app.agents.llm import build_llm
 from app.agents.pricing import preco_efetivo
+from app.agents.pseudonimos import pseudonimo_id_for_cliente
 from app.agents.registry import agente_id_for
 from app.agents.schemas import (
     AnaliseEstoqueFinanceiroOutput,
@@ -28,6 +29,7 @@ from app.agents.schemas import (
 )
 from app.integrations.base import ERPIndisponivelError, ItemVendaParaERP, VendaParaERP
 from app.integrations.registry import get_erp_adapter
+from app.integrations.sync import _backend_session
 from app.models.enums import CanalVendaEnum, StatusConfirmacaoVendaEnum, TipoDecisaoEnum, TipoMovimentacaoEnum
 from app.models.log_auditoria import LogAuditoria
 from app.models.movimentacao_estoque import MovimentacaoEstoque
@@ -62,10 +64,21 @@ FALLBACK_LLM_INDISPONIVEL = (
 )
 
 
-def _registrar_falha_llm(*, role: AgentRole, sessao_id: uuid.UUID | None, execucao: ExecucaoCrew, contexto: str) -> uuid.UUID:
+def _registrar_falha_llm(
+    *,
+    role: AgentRole,
+    sessao_id: uuid.UUID | None,
+    execucao: ExecucaoCrew,
+    contexto: str,
+    pseudonimo_id: uuid.UUID | None = None,
+) -> uuid.UUID:
     """LLM-04: nunca silencia — toda falha de execução (timeout ou
     resultado.pydantic ainda None depois do retry) fica registrada com o
-    output bruto que o LLM devolveu, pra diagnóstico."""
+    output bruto que o LLM devolveu, pra diagnóstico.
+
+    pseudonimo_id (LGPD-04): raw_output pode conter texto clínico parcial se
+    a falha ocorreu no meio de uma resposta de atendimento — mesma regra dos
+    outros registros dessa sessão."""
     return registrar_auditoria(
         role=role,
         tipo_decisao=TipoDecisaoEnum.bloqueio_venda,
@@ -84,6 +97,7 @@ def _registrar_falha_llm(*, role: AgentRole, sessao_id: uuid.UUID | None, execuc
         modelo_llm=execucao.modelo_llm,
         tokens_totais=execucao.tokens_totais,
         latencia_ms=execucao.latencia_ms,
+        pseudonimo_id=pseudonimo_id,
     )
 
 
@@ -327,8 +341,32 @@ def _buscar_lote_disponivel(produto_id: uuid.UUID, filial_id: uuid.UUID, quantid
         return row.lote_id if row else None
 
 
+def _verificar_consentimento_lgpd(cliente_id: uuid.UUID) -> None:
+    """LGPD-03: atendimento anônimo (sem cliente_id) nunca passa por aqui —
+    consentimento só faz sentido quando há um titular identificado. Levanta
+    PermissionError (mapeado a 403 em app/api/v1/endpoints/chat.py) se o
+    consentimento não foi registrado via POST /clientes/{id}/consentimento."""
+    session = _backend_session()
+    try:
+        consentimento_dado = session.execute(
+            text("SELECT consentimento_dado FROM clientes WHERE id = :id"), {"id": str(cliente_id)}
+        ).scalar_one_or_none()
+    finally:
+        session.close()
+    if not consentimento_dado:
+        raise PermissionError(
+            "Este atendimento é realizado por inteligência artificial. Seus dados de saúde serão usados "
+            "exclusivamente para sugerir medicamentos isentos de prescrição e serão tratados conforme nossa "
+            "Política de Privacidade. É necessário registrar consentimento (POST /clientes/{id}/consentimento) "
+            "antes de continuar."
+        )
+
+
 def run_atendimento(request: ChatAtendimentoRequest) -> ChatAtendimentoResponse:
     sessao_id = request.sessao_id or uuid.uuid4()
+
+    if request.cliente_id is not None:
+        _verificar_consentimento_lgpd(request.cliente_id)
 
     if not request.confirmar_compra:
         return _run_atendimento_pesquisa(request, sessao_id)
@@ -353,16 +391,29 @@ def _delimitar_input_cliente(mensagem: str) -> str:
 HISTORICO_CHAT_LIMITE = 10
 
 
-def _registrar_mensagem_sessao(sessao_id: uuid.UUID, papel: str, mensagem: str) -> None:
+def _registrar_mensagem_sessao(
+    sessao_id: uuid.UUID, papel: str, mensagem: str, *, pseudonimo_id: uuid.UUID | None = None
+) -> None:
     """Só chamada nos desfechos que representam uma resposta real ao cliente —
     nunca nos fallbacks de indisponibilidade do LLM (LLM-04/05): um turno
     "não consegui processar agora" não é contexto útil pra próxima chamada,
     só ruído de infraestrutura contaminando o histórico injetado depois.
+
+    pseudonimo_id (LGPD-04): None em atendimento anônimo; caso contrário, o
+    pseudônimo do titular (nunca cliente_id direto — ver app/agents/pseudonimos.py).
     """
     with agent_session(AgentRole.ATENDENTE) as session:
         session.execute(
-            text("INSERT INTO sessoes_chat_mensagens (sessao_id, papel, mensagem) VALUES (:sessao_id, :papel, :mensagem)"),
-            {"sessao_id": str(sessao_id), "papel": papel, "mensagem": mensagem},
+            text(
+                "INSERT INTO sessoes_chat_mensagens (sessao_id, papel, mensagem, pseudonimo_id) "
+                "VALUES (:sessao_id, :papel, :mensagem, :pseudonimo_id)"
+            ),
+            {
+                "sessao_id": str(sessao_id),
+                "papel": papel,
+                "mensagem": mensagem,
+                "pseudonimo_id": str(pseudonimo_id) if pseudonimo_id else None,
+            },
         )
 
 
@@ -461,6 +512,10 @@ def _validar_produto_sugerido(
 
 
 def _run_atendimento_pesquisa(request: ChatAtendimentoRequest, sessao_id: uuid.UUID) -> ChatAtendimentoResponse:
+    # LGPD-04: None em atendimento anônimo. Get-or-create — reaproveita o
+    # mesmo pseudônimo entre mensagens da mesma pessoa até ser revogado.
+    pseudonimo_id = pseudonimo_id_for_cliente(request.cliente_id) if request.cliente_id else None
+
     # LLM-06: histórico da sessão calculado uma vez só e reaproveitado entre
     # tentativas do retry (LLM-04) — não é o tipo de dado que muda entre uma
     # tentativa e a próxima da MESMA chamada.
@@ -496,7 +551,13 @@ def _run_atendimento_pesquisa(request: ChatAtendimentoRequest, sessao_id: uuid.U
 
     execucao = executar_crew(_criar_crew_pesquisa, modelo_llm=get_agent_settings().llm_model_id(AgentRole.ATENDENTE))
     if execucao.resultado is None:
-        log_id = _registrar_falha_llm(role=AgentRole.ATENDENTE, sessao_id=sessao_id, execucao=execucao, contexto="atendimento_pesquisa")
+        log_id = _registrar_falha_llm(
+            role=AgentRole.ATENDENTE,
+            sessao_id=sessao_id,
+            execucao=execucao,
+            contexto="atendimento_pesquisa",
+            pseudonimo_id=pseudonimo_id,
+        )
         return ChatAtendimentoResponse(
             sessao_id=sessao_id,
             resposta=FALLBACK_LLM_INDISPONIVEL,
@@ -530,9 +591,10 @@ def _run_atendimento_pesquisa(request: ChatAtendimentoRequest, sessao_id: uuid.U
             modelo_llm=execucao.modelo_llm,
             tokens_totais=execucao.tokens_totais,
             latencia_ms=execucao.latencia_ms,
+            pseudonimo_id=pseudonimo_id,
         )
-        _registrar_mensagem_sessao(sessao_id, "cliente", request.mensagem)
-        _registrar_mensagem_sessao(sessao_id, "avatar", FALLBACK_INTERACOES_NAO_VERIFICADAS)
+        _registrar_mensagem_sessao(sessao_id, "cliente", request.mensagem, pseudonimo_id=pseudonimo_id)
+        _registrar_mensagem_sessao(sessao_id, "avatar", FALLBACK_INTERACOES_NAO_VERIFICADAS, pseudonimo_id=pseudonimo_id)
         return ChatAtendimentoResponse(
             sessao_id=sessao_id,
             resposta=FALLBACK_INTERACOES_NAO_VERIFICADAS,
@@ -569,6 +631,7 @@ def _run_atendimento_pesquisa(request: ChatAtendimentoRequest, sessao_id: uuid.U
             modelo_llm=execucao.modelo_llm,
             tokens_totais=execucao.tokens_totais,
             latencia_ms=execucao.latencia_ms,
+            pseudonimo_id=pseudonimo_id,
         )
 
     tipo_decisao = TipoDecisaoEnum.sugestao_similar if produtos_validados else TipoDecisaoEnum.alerta_estoque
@@ -584,9 +647,10 @@ def _run_atendimento_pesquisa(request: ChatAtendimentoRequest, sessao_id: uuid.U
         modelo_llm=execucao.modelo_llm,
         tokens_totais=execucao.tokens_totais,
         latencia_ms=execucao.latencia_ms,
+        pseudonimo_id=pseudonimo_id,
     )
-    _registrar_mensagem_sessao(sessao_id, "cliente", request.mensagem)
-    _registrar_mensagem_sessao(sessao_id, "avatar", saida.resposta_texto)
+    _registrar_mensagem_sessao(sessao_id, "cliente", request.mensagem, pseudonimo_id=pseudonimo_id)
+    _registrar_mensagem_sessao(sessao_id, "avatar", saida.resposta_texto, pseudonimo_id=pseudonimo_id)
 
     return ChatAtendimentoResponse(
         sessao_id=sessao_id,
@@ -804,6 +868,13 @@ def _run_atendimento_confirmacao(request: ChatAtendimentoRequest, sessao_id: uui
     simples e mais seguro revalidar no único momento que importa, a
     confirmação de verdade.
     """
+    # LGPD-04: mesma regra de _run_atendimento_pesquisa — usada só nas
+    # mensagens de sessoes_chat_mensagens abaixo, nunca nos logs_auditoria
+    # entidade_afetada='vendas' (esses já são resolvíveis via
+    # entidade_id -> vendas.cliente_id, que fica em claro por obrigação
+    # fiscal; pseudonimizá-los seria redundante).
+    pseudonimo_id = pseudonimo_id_for_cliente(request.cliente_id) if request.cliente_id else None
+
     if request.produto_id is None:
         raise ValueError("produto_id é obrigatório quando confirmar_compra=true")
 
@@ -907,7 +978,13 @@ def _run_atendimento_confirmacao(request: ChatAtendimentoRequest, sessao_id: uui
         # deixamos uma venda 'pendente'órfã por causa de indisponibilidade do
         # LLM, e nunca a confirmamos sem uma tool call real de pagamento.
         _marcar_venda_falha(venda_id, motivo="Execução do LLM falhou (timeout ou resultado inválido após retry) antes de processar pagamento")
-        log_id = _registrar_falha_llm(role=AgentRole.ATENDENTE, sessao_id=sessao_id, execucao=execucao, contexto="atendimento_confirmacao")
+        log_id = _registrar_falha_llm(
+            role=AgentRole.ATENDENTE,
+            sessao_id=sessao_id,
+            execucao=execucao,
+            contexto="atendimento_confirmacao",
+            pseudonimo_id=pseudonimo_id,
+        )
         return ChatAtendimentoResponse(
             sessao_id=sessao_id,
             resposta=FALLBACK_LLM_INDISPONIVEL,
@@ -949,8 +1026,8 @@ def _run_atendimento_confirmacao(request: ChatAtendimentoRequest, sessao_id: uui
             tokens_totais=execucao.tokens_totais,
             latencia_ms=execucao.latencia_ms,
         )
-        _registrar_mensagem_sessao(sessao_id, "cliente", request.mensagem)
-        _registrar_mensagem_sessao(sessao_id, "avatar", saida.resposta_texto)
+        _registrar_mensagem_sessao(sessao_id, "cliente", request.mensagem, pseudonimo_id=pseudonimo_id)
+        _registrar_mensagem_sessao(sessao_id, "avatar", saida.resposta_texto, pseudonimo_id=pseudonimo_id)
         return ChatAtendimentoResponse(
             sessao_id=sessao_id,
             resposta=saida.resposta_texto,
@@ -1020,8 +1097,8 @@ def _run_atendimento_confirmacao(request: ChatAtendimentoRequest, sessao_id: uui
         tokens_totais=execucao.tokens_totais,
         latencia_ms=execucao.latencia_ms,
     )
-    _registrar_mensagem_sessao(sessao_id, "cliente", request.mensagem)
-    _registrar_mensagem_sessao(sessao_id, "avatar", saida.resposta_texto)
+    _registrar_mensagem_sessao(sessao_id, "cliente", request.mensagem, pseudonimo_id=pseudonimo_id)
+    _registrar_mensagem_sessao(sessao_id, "avatar", saida.resposta_texto, pseudonimo_id=pseudonimo_id)
 
     return ChatAtendimentoResponse(
         sessao_id=sessao_id,

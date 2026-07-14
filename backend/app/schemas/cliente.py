@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -28,3 +28,7 @@ class ClienteRead(ClienteBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    # LGPD-03: só muda via POST /clientes/{id}/consentimento — nunca pelo
+    # ClienteUpdate/PATCH acima (de propósito: não faz parte dele).
+    consentimento_dado: bool
+    consentimento_lgpd_em: datetime | None = None

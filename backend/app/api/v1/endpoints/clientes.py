@@ -1,6 +1,8 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,3 +56,40 @@ async def remover_cliente(cliente_id: uuid.UUID, db: AsyncSession = Depends(get_
     if cliente is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado")
     await crud_cliente.remove(db, db_obj=cliente)
+
+
+@router.delete("/{cliente_id}/dados-clinicos", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_dados_clinicos(cliente_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> None:
+    """LGPD-04 (art. 18 — direito de eliminação): revoga o pseudônimo ativo
+    do titular (revogado_em preenchido, cliente_id desligado). As linhas de
+    logs_auditoria/sessoes_chat_mensagens que apontavam pro pseudonimo_id
+    continuam existindo — auditoria é append-only por design — só deixam de
+    ser resolvíveis a este cliente. Uma nova sessão de atendimento do mesmo
+    cliente, depois disso, gera um pseudônimo novo.
+    """
+    cliente = await crud_cliente.get(db, cliente_id)
+    if cliente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado")
+    await db.execute(
+        text(
+            "UPDATE pseudonimos_titular SET revogado_em = now(), cliente_id = NULL "
+            "WHERE cliente_id = :cid AND revogado_em IS NULL"
+        ),
+        {"cid": str(cliente_id)},
+    )
+    await db.commit()
+
+
+@router.post("/{cliente_id}/consentimento", response_model=ClienteRead)
+async def registrar_consentimento(cliente_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> Cliente:
+    """LGPD-03: único jeito de marcar consentimento_dado=true — nunca o PATCH
+    genérico, pra manter consentimento_lgpd_em como um carimbo confiável de
+    quando o aviso de atendimento por IA foi de fato aceito."""
+    cliente = await crud_cliente.get(db, cliente_id)
+    if cliente is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado")
+    cliente.consentimento_dado = True
+    cliente.consentimento_lgpd_em = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(cliente)
+    return cliente

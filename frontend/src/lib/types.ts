@@ -77,6 +77,9 @@ export interface Cliente {
   data_nascimento: string | null;
   telefone: string | null;
   email: string | null;
+  // LGPD-03: só muda via POST /clientes/{id}/consentimento.
+  consentimento_dado: boolean;
+  consentimento_lgpd_em: string | null;
 }
 
 export interface PrincipioAtivo {

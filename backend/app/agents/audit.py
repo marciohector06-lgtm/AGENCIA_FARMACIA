@@ -23,6 +23,7 @@ def registrar_auditoria(
     modelo_llm: str | None = None,
     tokens_totais: int | None = None,
     latencia_ms: int | None = None,
+    pseudonimo_id: uuid.UUID | None = None,
 ) -> uuid.UUID:
     """Grava uma linha em logs_auditoria, sempre pela role do próprio agente que decidiu.
 
@@ -48,6 +49,7 @@ def registrar_auditoria(
             modelo_llm=modelo_llm,
             tokens_totais=tokens_totais,
             latencia_ms=latencia_ms,
+            pseudonimo_id=pseudonimo_id,
         )
         session.add(log)
         session.flush()
