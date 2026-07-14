@@ -404,9 +404,10 @@ def reconciliar_vendas_pendentes(adapter: ERPAdapter, idade_minima_minutos: int 
     Orquestrador nunca escreve dado operacional diretamente, só decide e
     audita (regra já estabelecida em 0011).
     """
+    from sqlalchemy import text as sqltext
+
     from app.agents.db_sync import agent_session
     from app.agents.service import _debitar_estoque_venda, _marcar_venda_confirmada, _marcar_venda_falha
-    from sqlalchemy import text as sqltext
 
     resultados = {"confirmadas": 0, "falhas": 0, "ainda_pendentes": 0}
 

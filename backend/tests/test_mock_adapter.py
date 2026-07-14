@@ -44,7 +44,7 @@ def test_mock_adapter_produto_com_tarja_ausente_esta_no_dataset() -> None:
 def test_mock_adapter_lote_sem_validade_esta_no_dataset() -> None:
     adapter = MockAdapter()
     lotes = adapter.listar_lotes()
-    assert any(l.data_validade is None for l in lotes)
+    assert any(lote.data_validade is None for lote in lotes)
 
 
 def _venda_exemplo(quantidade: int = 2) -> VendaParaERP:

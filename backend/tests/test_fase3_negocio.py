@@ -419,6 +419,51 @@ def test_aprovar_desconto_com_custo_zero_forca_rejeicao_mesmo_pedindo_aprovar() 
 
 
 # ---------------------------------------------------------------------------
+# QA-02 (FASE 6): agente_estoque não pode aprovar (nem a própria proposta) —
+# 0011 só concede INSERT+SELECT em precificacao_historico pra ele; UPDATE
+# fica exclusivo de agente_financeiro (0012: upd_financeiro_aprova).
+# ---------------------------------------------------------------------------
+
+
+@requires_db
+def test_agente_estoque_nao_consegue_aprovar_a_propria_proposta() -> None:
+    from sqlalchemy.exc import ProgrammingError
+
+    from app.agents.registry import agente_id_for
+    from app.models.precificacao_historico import PrecificacaoHistorico
+
+    produto_id = _criar_produto_manual(custo_medio="5.00")
+    cenario = _criar_lote_estoque(produto_id, custo_unitario="5.00")
+
+    with agent_session(AgentRole.GERENTE_ESTOQUE) as session:
+        proposta = PrecificacaoHistorico(
+            produto_id=produto_id,
+            lote_id=cenario["lote_id"],
+            preco_anterior=Decimal("9.90"),
+            preco_novo=Decimal("8.00"),
+            motivo="Teste auto-aprovação (QA-02)",
+            proposto_por_agente_id=agente_id_for(AgentRole.GERENTE_ESTOQUE),
+        )
+        session.add(proposta)
+        session.flush()
+        precificacao_id = proposta.id
+
+    with agent_session(AgentRole.GERENTE_ESTOQUE) as session:
+        with pytest.raises(ProgrammingError, match="permission denied"):
+            session.execute(
+                text("UPDATE precificacao_historico SET status_aprovacao = 'aprovado' WHERE id = :id"),
+                {"id": str(precificacao_id)},
+            )
+        session.rollback()
+
+    with agent_session(AgentRole.ORQUESTRADOR) as session:
+        status_no_banco = session.execute(
+            text("SELECT status_aprovacao FROM precificacao_historico WHERE id = :id"), {"id": str(precificacao_id)}
+        ).scalar_one()
+    assert status_no_banco == "proposto"
+
+
+# ---------------------------------------------------------------------------
 # BUG-02 / BUG-03 / BUG-04: sem reserva prévia — revalidação atômica na
 # confirmação é a única defesa contra concorrência (decisão da FASE 0,
 # reafirmada em _run_atendimento_confirmacao). Duas "confirmações"

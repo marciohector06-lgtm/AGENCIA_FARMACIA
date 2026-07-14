@@ -1,0 +1,20 @@
+[tool.ruff]
+line-length = 130
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+# E501 (linha longa): o código pré-FASE-6 nunca seguiu um limite de coluna
+# (várias linhas de teste/setup passam de 160 chars) — reformatar tudo isso
+# agora é um diff gigante e alheio a esta fase. Exceção temporária
+# documentada (QA-04); reative quando o projeto adotar um formatter (black/
+# ruff format) que resolva isso de uma vez.
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+# QA-04 (FASE 6): não força tipagem retroativa em app/ (nunca foi escrito com
+# mypy em mente). Escopo inicial é só o que a FASE 6 introduziu — expandir
+# módulo a módulo conforme o resto for anotado de propósito.
+files = ["alembic"]
