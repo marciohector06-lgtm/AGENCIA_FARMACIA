@@ -41,8 +41,9 @@ from app.schemas.chat import ChatAtendimentoRequest, ChatAtendimentoResponse, Pr
 # em toda ChatAtendimentoResponse construída por este módulo.
 DISCLAIMER_PADRAO = (
     "Este atendimento é feito por um assistente de inteligência artificial e não substitui "
-    "a avaliação de um farmacêutico. Em caso de dúvida, fale com o farmacêutico responsável "
-    "antes de usar qualquer medicamento."
+    "a avaliação de um farmacêutico. Sempre que houver qualquer dúvida — inclusive sobre risco "
+    "de alergia a algum componente do medicamento — fale com o farmacêutico responsável antes "
+    "de usar qualquer medicamento."
 )
 
 # CLIN-05: fallback determinístico quando o guardrail de interações bloqueia
