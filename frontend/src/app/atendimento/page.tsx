@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { SVGProps } from "react";
 import { api, ApiError, ApiTimeoutError } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { FieldWrapper, SelectInput, TextInput } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { useOptions } from "@/lib/hooks";
+import { useReconhecimentoVoz, useSintese } from "@/lib/useVoz";
 import { ChatAtendimentoResponse, Cliente, ProdutoSugerido } from "@/lib/types";
 
 const AVISO_IA_TEXTO =
@@ -47,8 +49,41 @@ export default function AtendimentoPage() {
   const [lactante, setLactante] = useState(false);
   const [idade, setIdade] = useState("");
 
+  // Voz (Nível 2) — entrada por fala e saída por voz, só frontend (ver
+  // src/lib/useVoz.ts). Desligado por padrão no envio automático: no totem
+  // o cliente pode estar conversando com alguém do lado com o mic aberto,
+  // nunca dispara sem confirmação explícita dele.
+  const [autoEnvio, setAutoEnvio] = useState(false);
+  const {
+    suportado: micSuportado,
+    gravando,
+    iniciar: iniciarGravacao,
+    parar: pararGravacao,
+  } = useReconhecimentoVoz({
+    onTextoAtualizado: (texto) => setInput(texto),
+    onSilencio: (texto) => {
+      if (autoEnvio && texto.trim()) {
+        pararGravacao();
+        enviarMensagem(texto);
+      }
+    },
+  });
+  const { falando, falar, pararFala } = useSintese({ rate: 0.9 });
+
   function pushMessage(msg: ChatMessage) {
     setMensagens((prev) => [...prev, msg]);
+  }
+
+  function alternarGravacao() {
+    // Requisito: se o agente estiver falando quando o cliente clica no mic,
+    // para a fala IMEDIATAMENTE antes de gravar — senão o microfone capta a
+    // própria voz do agente e cria um loop.
+    if (falando) pararFala();
+    if (gravando) {
+      pararGravacao();
+    } else {
+      iniciarGravacao();
+    }
   }
 
   // LGPD-03: toda vez que um cliente é selecionado, checa se ele já
@@ -99,14 +134,14 @@ export default function AtendimentoPage() {
     };
   }
 
-  async function enviarMensagem() {
+  async function enviarMensagem(textoFalado?: string) {
     if (!filialId) {
       setErro("Selecione a filial de atendimento antes de conversar com o Avatar.");
       return;
     }
-    if (!input.trim()) return;
+    const texto = (textoFalado ?? input).trim();
+    if (!texto) return;
 
-    const texto = input.trim();
     setInput("");
     setErro(null);
     pushMessage({ id: crypto.randomUUID(), role: "user", text: texto });
@@ -129,6 +164,7 @@ export default function AtendimentoPage() {
         produtos: resp.produtos_sugeridos,
         disclaimer: resp.disclaimer,
       });
+      falar([resp.disclaimer, resp.resposta]);
     } catch (err) {
       if (err instanceof ApiTimeoutError) {
         setErro(err.message);
@@ -161,6 +197,7 @@ export default function AtendimentoPage() {
         vendaId: resp.venda_id,
         disclaimer: resp.disclaimer,
       });
+      falar([resp.disclaimer, resp.resposta]);
     } catch (err) {
       if (err instanceof ApiTimeoutError) {
         setErro(err.message);
@@ -175,7 +212,7 @@ export default function AtendimentoPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Atendimento (Avatar)</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Atendimento (Avatar)</h1>
         <p className="text-sm text-slate-400">
           Converse com o Farmacêutico Clínico virtual — ele só sugere MIPs reais do catálogo, verifica estoque e
           busca substitutos quando necessário.
@@ -211,17 +248,17 @@ export default function AtendimentoPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-[#0b0d13] shadow-lg shadow-black/20">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-lg">
         <button
           type="button"
           onClick={() => setPerfilAberto((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium text-slate-200"
+          className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium text-slate-700"
         >
           Perfil clínico (opcional — preencha o que souber)
           <span className="text-slate-500">{perfilAberto ? "▲" : "▼"}</span>
         </button>
         {perfilAberto && (
-          <div className="grid grid-cols-2 gap-3 border-t border-white/[0.06] px-4 py-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 border-t border-slate-200 px-4 py-3 sm:grid-cols-4">
             <div className="col-span-2 sm:col-span-2">
               <FieldWrapper label="Medicamentos em uso (separados por vírgula)" htmlFor="medicamentos-em-uso">
                 <TextInput
@@ -243,11 +280,11 @@ export default function AtendimentoPage() {
               />
             </FieldWrapper>
             <div className="flex items-end gap-4 pb-2">
-              <label className="flex items-center gap-1.5 text-sm text-slate-300">
+              <label className="flex items-center gap-1.5 text-sm text-slate-600">
                 <input type="checkbox" checked={gestante} onChange={(e) => setGestante(e.target.checked)} />
                 Gestante
               </label>
-              <label className="flex items-center gap-1.5 text-sm text-slate-300">
+              <label className="flex items-center gap-1.5 text-sm text-slate-600">
                 <input type="checkbox" checked={lactante} onChange={(e) => setLactante(e.target.checked)} />
                 Lactante
               </label>
@@ -256,7 +293,7 @@ export default function AtendimentoPage() {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto rounded-xl border border-white/10 bg-[#0b0d13] p-5 shadow-lg shadow-black/20">
+      <div className="flex flex-1 flex-col overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-lg">
         {mensagens.length === 0 && (
           <div className="flex flex-1 items-center justify-center text-center text-sm text-slate-500">
             Descreva um sintoma ou peça um produto para começar a conversa.
@@ -267,14 +304,35 @@ export default function AtendimentoPage() {
             <ChatBubble key={msg.id} msg={msg} onConfirmar={confirmarCompra} disabled={loading || precisaConsentimento} />
           ))}
           {loading && (
-            <div className="max-w-md self-start rounded-lg bg-white/[0.05] px-4 py-2 text-sm text-slate-400">
+            <div className="max-w-md self-start rounded-lg bg-slate-100 px-4 py-2 text-sm text-slate-400">
               O Avatar está pensando...
             </div>
           )}
         </div>
       </div>
 
-      {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{erro}</div>}
+      {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{erro}</div>}
+
+      {/* Banner de "Parar leitura" — visibilidade máxima de propósito (totem:
+          o cliente não pode esperar o áudio terminar pra fazer a próxima
+          pergunta). Cor deliberadamente fora da paleta branco/vermelho do
+          resto da interface, pra ficar inconfundível. */}
+      {falando && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2.5 text-white shadow-lg">
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <SpeakerIcon className="h-5 w-5 animate-pulse" />
+            O Avatar está falando...
+          </span>
+          <button
+            type="button"
+            onClick={pararFala}
+            aria-label="Parar leitura em voz alta"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-slate-900 shadow-md transition-transform hover:scale-105"
+          >
+            <StopIcon className="h-6 w-6" />
+          </button>
+        </div>
+      )}
 
       <form
         onSubmit={(e) => {
@@ -289,10 +347,33 @@ export default function AtendimentoPage() {
           placeholder="Ex: estou com dor de cabeça e febre, o que vocês têm?"
           disabled={loading || precisaConsentimento}
         />
+        {/* Fallback gracioso: se o navegador não suporta SpeechRecognition
+            (ex.: Firefox), o botão nem aparece — só o campo de texto normal. */}
+        {micSuportado && (
+          <button
+            type="button"
+            onClick={alternarGravacao}
+            disabled={loading || precisaConsentimento}
+            aria-label={gravando ? "Parar gravação" : "Falar com o Avatar"}
+            title={gravando ? "Parar gravação" : "Falar com o Avatar"}
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              gravando ? "animate-pulse bg-red-600" : "bg-slate-700 hover:bg-slate-800"
+            }`}
+          >
+            <MicIcon className="h-6 w-6" />
+          </button>
+        )}
         <Button type="submit" disabled={loading || precisaConsentimento}>
           Enviar
         </Button>
       </form>
+
+      {micSuportado && (
+        <label className="-mt-2 flex items-center gap-1.5 self-start text-xs text-slate-500">
+          <input type="checkbox" checked={autoEnvio} onChange={(e) => setAutoEnvio(e.target.checked)} />
+          Enviar automaticamente 1.5s após parar de falar
+        </label>
+      )}
 
       {/* LGPD-03: primeira interação com um cliente identificado que ainda
           não consentiu — bloqueia o chat até aceitar (a garantia real é o
@@ -307,7 +388,7 @@ export default function AtendimentoPage() {
             </Button>
           }
         >
-          <p className="text-sm text-slate-300">{AVISO_IA_TEXTO}</p>
+          <p className="text-sm text-slate-600">{AVISO_IA_TEXTO}</p>
         </Modal>
       )}
     </div>
@@ -328,7 +409,7 @@ function ChatBubble({
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
       <div
         className={`max-w-lg rounded-lg px-4 py-2 text-sm ${
-          isUser ? "bg-emerald-500 text-slate-950" : "bg-white/[0.06] text-slate-200"
+          isUser ? "bg-red-600 text-white" : "bg-slate-100 text-slate-700"
         }`}
       >
         {msg.text}
@@ -336,12 +417,12 @@ function ChatBubble({
       {/* CLIN-06: disclaimer sempre em destaque visual separado — nunca dentro
           do balão de resposta, pra não se misturar com o texto do "avatar". */}
       {!isUser && msg.disclaimer && (
-        <div className="mt-1 max-w-lg rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">
+        <div className="mt-1 max-w-lg rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-700">
           {msg.disclaimer}
         </div>
       )}
       {msg.vendaId && (
-        <p className="mt-1 text-xs text-emerald-400">Venda registrada: {msg.vendaId}</p>
+        <p className="mt-1 text-xs text-red-600">Venda registrada: {msg.vendaId}</p>
       )}
       {msg.produtos && msg.produtos.length > 0 && (
         <div className="mt-2 flex flex-col gap-2">
@@ -375,9 +456,9 @@ function ProdutoSugeridoCard({
     Number.isInteger(quantidade) && quantidade >= QUANTIDADE_MIN && quantidade <= QUANTIDADE_MAX;
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2">
+    <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2">
       <div>
-        <p className="text-sm font-medium text-slate-200">{produto.nome_comercial}</p>
+        <p className="text-sm font-medium text-slate-700">{produto.nome_comercial}</p>
         <p className="text-xs text-slate-500">
           {produto.disponivel ? "Disponível em estoque" : "Sem estoque"} · R$ {produto.preco.toFixed(2)}
         </p>
@@ -404,5 +485,31 @@ function ProdutoSugeridoCard({
         </Button>
       </div>
     </div>
+  );
+}
+
+function MicIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+      <path d="M19 11a7 7 0 0 1-14 0M12 19v3" />
+    </svg>
+  );
+}
+
+function SpeakerIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+      <path d="M17 8.5a5 5 0 0 1 0 7M20 6a9 9 0 0 1 0 12" />
+    </svg>
+  );
+}
+
+function StopIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
   );
 }
