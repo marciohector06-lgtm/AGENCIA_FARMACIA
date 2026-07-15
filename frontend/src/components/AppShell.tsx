@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { getToken } from "@/lib/api";
@@ -30,12 +30,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const publica = ROTAS_PUBLICAS.includes(pathname);
   const temToken = useTemToken();
   const autenticado = publica || temToken;
+  const [menuAberto, setMenuAberto] = useState(false);
 
+  // Le o localStorage direto (nao o `temToken` do render) de proposito:
+  // efeito so roda no cliente, entao nunca tem a ambiguidade de SSR que
+  // useSyncExternalStore existe pra resolver no render. Usar `temToken`
+  // aqui reabre exatamente esse problema: o efeito agendado pelo primeiro
+  // render (o da reconciliacao de hidratacao, com temToken ainda "false")
+  // dispara um redirect pra /login mesmo com token valido no storage.
   useEffect(() => {
-    if (!publica && !temToken) {
+    if (!publica && getToken() === null) {
       router.replace("/login");
     }
-  }, [pathname, publica, temToken, router]);
+  }, [pathname, publica, router]);
 
   if (publica) {
     return <>{children}</>;
@@ -47,10 +54,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-full min-h-screen w-full">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-8">
-        <div className="mx-auto w-full max-w-6xl">{children}</div>
-      </main>
+      <Sidebar mobileOpen={menuAberto} onCloseMobile={() => setMenuAberto(false)} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center gap-3 border-b border-white/[0.06] bg-[#08090e] px-4 py-3 lg:hidden">
+          <button
+            onClick={() => setMenuAberto(true)}
+            aria-label="Abrir menu"
+            className="rounded-md p-1.5 text-slate-300 hover:bg-white/[0.06]"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.6}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="text-sm font-semibold tracking-tight text-white">Farmácia MAS</span>
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }
