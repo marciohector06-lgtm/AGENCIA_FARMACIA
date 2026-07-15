@@ -16,6 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Farmácia MAS",
   description: "Painel de gestão e atendimento com agentes de IA",
+  // Reforça (via <meta name="color-scheme">, além do CSS) que os
+  // controles nativos do navegador — inclusive o popup de <select> —
+  // devem renderizar no tema escuro. Alguns navegadores/versões honram
+  // esse hint de forma mais confiável do que só a propriedade CSS.
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
