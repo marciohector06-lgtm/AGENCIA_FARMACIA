@@ -18,9 +18,9 @@ export const metadata: Metadata = {
   description: "Painel de gestão e atendimento com agentes de IA",
   // Reforça (via <meta name="color-scheme">, além do CSS) que os
   // controles nativos do navegador — inclusive o popup de <select> —
-  // devem renderizar no tema escuro. Alguns navegadores/versões honram
+  // devem renderizar no tema claro. Alguns navegadores/versões honram
   // esse hint de forma mais confiável do que só a propriedade CSS.
-  colorScheme: "dark",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex h-full min-h-screen text-slate-100">
+      <body className="flex h-full min-h-screen text-slate-900">
         <AppShell>{children}</AppShell>
       </body>
     </html>

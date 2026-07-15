@@ -35,17 +35,17 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0b0d13] p-8 shadow-2xl shadow-black/40">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-2xl">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-base font-bold text-slate-950 shadow-lg shadow-emerald-500/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-base font-bold text-white shadow-lg shadow-red-500/20">
             M
           </div>
-          <h1 className="text-lg font-semibold tracking-tight text-white">Farmácia MAS</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-slate-900">Farmácia MAS</h1>
           <p className="text-sm text-slate-400">Entre com sua conta de operador</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{erro}</div>}
+          {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-700">{erro}</div>}
           <FieldWrapper label="E-mail" htmlFor="email" required>
             <TextInput
               id="email"

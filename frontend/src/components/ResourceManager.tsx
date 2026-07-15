@@ -117,7 +117,7 @@ function FieldInput({
         type="checkbox"
         checked={value as boolean}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-white/20 bg-white/[0.03] text-emerald-500 focus:ring-emerald-500/40"
+        className="h-4 w-4 rounded border-slate-300 bg-slate-50 text-red-500 focus:ring-red-500/40"
       />
     );
   }
@@ -252,7 +252,7 @@ export function ResourceManager<T extends { id: string }>({
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-white">{title}</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
           {description && <p className="text-sm text-slate-400">{description}</p>}
         </div>
         {allowCreate && (
@@ -269,12 +269,12 @@ export function ResourceManager<T extends { id: string }>({
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>
+        <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#0b0d13] shadow-lg shadow-black/20">
-        <table className="min-w-full divide-y divide-white/[0.06] text-sm">
-          <thead className="bg-white/[0.02]">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
             <tr>
               {columns.map((col) => (
                 <th key={col.key} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -284,7 +284,7 @@ export function ResourceManager<T extends { id: string }>({
               {(editFields || allowDelete || renderRowExtra) && <th className="px-4 py-2.5" />}
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.04]">
+          <tbody className="divide-y divide-slate-100">
             {loading && (
               <tr>
                 <td colSpan={columns.length + 1} className="px-4 py-6 text-center text-slate-500">
@@ -301,9 +301,9 @@ export function ResourceManager<T extends { id: string }>({
             )}
             {!loading &&
               items.map((item) => (
-                <tr key={item.id} className="transition-colors hover:bg-white/[0.03]">
+                <tr key={item.id} className="transition-colors hover:bg-slate-50">
                   {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-2.5 text-slate-300">
+                    <td key={col.key} className="px-4 py-2.5 text-slate-600">
                       {col.render ? col.render(item) : String((item as unknown as Record<string, unknown>)[col.key] ?? "—")}
                     </td>
                   ))}
@@ -313,7 +313,7 @@ export function ResourceManager<T extends { id: string }>({
                       {editFields && isRowEditable(item) && (
                         <button
                           onClick={() => openEdit(item)}
-                          className="ml-3 text-sm font-medium text-emerald-400 hover:text-emerald-300"
+                          className="ml-3 text-sm font-medium text-red-600 hover:text-red-500"
                         >
                           Editar
                         </button>
@@ -321,7 +321,7 @@ export function ResourceManager<T extends { id: string }>({
                       {allowDelete && isRowEditable(item) && (
                         <button
                           onClick={() => handleDelete(item)}
-                          className="ml-3 text-sm font-medium text-red-400 hover:text-red-300"
+                          className="ml-3 text-sm font-medium text-red-400 hover:text-red-700"
                         >
                           Excluir
                         </button>
@@ -350,7 +350,7 @@ export function ResourceManager<T extends { id: string }>({
           }
         >
           <form id="create-form" onSubmit={handleCreate} className="flex flex-col gap-4">
-            {formError && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{formError}</div>}
+            {formError && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-700">{formError}</div>}
             {createFields.map((field) => (
               <FieldWrapper
                 key={field.name}
@@ -386,7 +386,7 @@ export function ResourceManager<T extends { id: string }>({
           }
         >
           <form id="edit-form" onSubmit={handleEdit} className="flex flex-col gap-4">
-            {formError && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{formError}</div>}
+            {formError && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-700">{formError}</div>}
             {editFields.map((field) => (
               <FieldWrapper
                 key={field.name}

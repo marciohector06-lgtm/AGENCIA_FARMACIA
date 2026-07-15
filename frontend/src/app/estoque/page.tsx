@@ -85,7 +85,7 @@ function MovimentarAction({ estoque, onChanged }: { estoque: Estoque; onChanged:
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="text-sm font-medium text-emerald-400 hover:text-emerald-300">
+      <button onClick={() => setOpen(true)} className="text-sm font-medium text-red-600 hover:text-red-500">
         Movimentar
       </button>
       {open && (
@@ -104,7 +104,7 @@ function MovimentarAction({ estoque, onChanged }: { estoque: Estoque; onChanged:
           }
         >
           <form id="movimentar-form" onSubmit={salvar} className="flex flex-col gap-4">
-            {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{erro}</div>}
+            {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-700">{erro}</div>}
             <FieldWrapper label="Tipo" htmlFor="tipo-mov" required>
               <SelectInput id="tipo-mov" value={tipo} onChange={(e) => setTipo(e.target.value as "entrada" | "ajuste")}>
                 <option value="entrada">Entrada</option>

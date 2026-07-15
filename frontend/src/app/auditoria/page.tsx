@@ -59,7 +59,7 @@ export default function AuditoriaPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Auditoria</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Auditoria</h1>
         <p className="text-sm text-slate-400">
           Toda decisão autônoma dos agentes — o quê, por quê, com quais dados, e quando.
         </p>
@@ -76,31 +76,31 @@ export default function AuditoriaPage() {
         </SelectInput>
       </div>
 
-      {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{erro}</div>}
+      {erro && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{erro}</div>}
 
       <div className="flex flex-col gap-2">
         {loading && <p className="text-sm text-slate-500">Carregando...</p>}
         {!loading && logs.length === 0 && <p className="text-sm text-slate-500">Nenhum registro encontrado.</p>}
         {logs.map((log) => (
-          <div key={log.id} className="rounded-xl border border-white/10 bg-[#0b0d13] p-4 shadow-lg shadow-black/20">
+          <div key={log.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
             <div className="flex flex-wrap items-center gap-2">
               <Badge color={tipoColor[log.tipo_decisao] ?? "slate"}>{log.tipo_decisao}</Badge>
-              <span className="text-sm font-medium text-slate-200">{log.agente_nome}</span>
+              <span className="text-sm font-medium text-slate-700">{log.agente_nome}</span>
               <span className="text-xs text-slate-500">({log.agente_tipo})</span>
               <span className="ml-auto text-xs text-slate-500">
                 {new Date(log.criado_em).toLocaleString("pt-BR")}
               </span>
             </div>
-            <p className="mt-2 text-sm text-slate-300">{log.decisao_tomada}</p>
+            <p className="mt-2 text-sm text-slate-600">{log.decisao_tomada}</p>
             {log.justificativa && <p className="mt-1 text-sm text-slate-500">Justificativa: {log.justificativa}</p>}
             <button
               onClick={() => setExpandido(expandido === log.id ? null : log.id)}
-              className="mt-2 text-xs font-medium text-emerald-400 hover:text-emerald-300"
+              className="mt-2 text-xs font-medium text-red-600 hover:text-red-500"
             >
               {expandido === log.id ? "Ocultar dados base" : "Ver dados base (JSON)"}
             </button>
             {expandido === log.id && (
-              <pre className="mt-2 overflow-x-auto rounded-lg border border-white/[0.06] bg-black/30 p-3 text-xs text-slate-400">
+              <pre className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-slate-100 p-3 text-xs text-slate-400">
                 {JSON.stringify(log.dados_base, null, 2)}
               </pre>
             )}

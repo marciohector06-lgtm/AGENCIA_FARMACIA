@@ -56,11 +56,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-full min-h-screen w-full">
       <Sidebar mobileOpen={menuAberto} onCloseMobile={() => setMenuAberto(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-white/[0.06] bg-[#08090e] px-4 py-3 lg:hidden">
+        <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
           <button
             onClick={() => setMenuAberto(true)}
             aria-label="Abrir menu"
-            className="rounded-md p-1.5 text-slate-300 hover:bg-white/[0.06]"
+            className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"
           >
             <svg
               viewBox="0 0 24 24"
@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="text-sm font-semibold tracking-tight text-white">Farmácia MAS</span>
+          <span className="text-sm font-semibold tracking-tight text-slate-900">Farmácia MAS</span>
         </header>
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">
           <div className="mx-auto w-full max-w-6xl">{children}</div>

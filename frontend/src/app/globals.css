@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #05060a;
-  --surface: #0d0f16;
-  --surface-raised: #12141d;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --foreground: #e7e9ee;
-  --foreground-muted: #8b91a3;
-  --accent: #34d399;
-  --accent-strong: #10b981;
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-raised: #fafafa;
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --foreground: #0f172a;
+  --foreground-muted: #64748b;
+  --accent: #dc2626;
+  --accent-strong: #b91c1c;
 }
 
 @theme inline {
@@ -23,49 +23,53 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  background: radial-gradient(ellipse 120% 80% at 15% -10%, rgba(16, 185, 129, 0.12), transparent 55%),
-    radial-gradient(ellipse 100% 60% at 100% 0%, rgba(59, 130, 246, 0.08), transparent 50%), var(--background);
+  background: radial-gradient(ellipse 120% 80% at 15% -10%, rgba(220, 38, 38, 0.05), transparent 55%),
+    radial-gradient(ellipse 100% 60% at 100% 0%, rgba(220, 38, 38, 0.03), transparent 50%), var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
 ::selection {
-  background: rgba(16, 185, 129, 0.35);
-  color: #fff;
+  background: rgba(220, 38, 38, 0.2);
+  color: #0f172a;
 }
 
-/* O <select> fechado herda o tema escuro via classes do Tailwind, mas o
-   popup nativo de opções (aberto) e' renderizado pelo SO/navegador e ignora
-   isso se so herdar de <html> — precisa do color-scheme direto no elemento
-   (nao só herdado), um fallback explicito de cor+fundo pras <option>, E
-   forced-color-adjust pra nao cair pro branco padrao em navegadores/temas
-   de alto contraste que ignoram cor de fundo customizada em <option>
-   (suporte a isso é inconsistente entre engines — por isso as 3 camadas,
-   não so uma). Sem isso o popup abre com fundo branco e o texto claro
-   (pensado pro nosso fundo escuro) fica ilegível, só a opção com hover/
-   selecionada aparece (destaque azul nativo do navegador). */
+/* Mesmo problema em duas roupagens: <select> e o popup nativo de opções, MAS
+   TAMBÉM <input>/<textarea> comuns — em Windows com tema de alto contraste
+   ou "cores forçadas" ativado (Configurações > Acessibilidade > Contraste),
+   o navegador ignora QUALQUER cor customizada de texto/fundo em controles de
+   formulário, a menos que a gente diga explicitamente pra não ignorar
+   (forced-color-adjust: none). Sem isso: o campo de texto digita com o
+   texto na cor do tema forçado (que pode coincidir com o fundo — invisível
+   até você selecionar o texto), e o popup do <select> abre com fundo que
+   não bate com o texto. color-scheme direto no elemento (não só herdado de
+   <html>) + fallback explícito de cor/fundo + forced-color-adjust: none nos
+   três, porque suporte a isso é inconsistente entre engines. */
+input,
+textarea,
 select,
 select option {
-  color-scheme: dark;
-  background-color: #12141d;
-  color: #e7e9ee;
+  color-scheme: light;
+  background-color: #ffffff;
+  color: #0f172a;
+  caret-color: #0f172a;
   forced-color-adjust: none;
 }
 
 select option:checked,
 select option:hover {
-  background-color: #1c2030;
-  color: #ffffff;
+  background-color: #fee2e2;
+  color: #7f1d1d;
 }
 
-/* Scrollbars — visible but unobtrusive, matches the dark surface palette. */
+/* Scrollbars — visible but unobtrusive, matches the light surface palette. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -78,13 +82,13 @@ select option:hover {
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.14);
+  background-color: rgba(15, 23, 42, 0.18);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.24);
+  background-color: rgba(15, 23, 42, 0.28);
   background-clip: content-box;
 }
