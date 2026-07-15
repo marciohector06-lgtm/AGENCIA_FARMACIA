@@ -38,6 +38,20 @@ body {
   color: #fff;
 }
 
+/* O <select> fechado herda o tema escuro via classes do Tailwind, mas o
+   popup nativo de opções (aberto) e' renderizado pelo SO/navegador e ignora
+   isso se so herdar de <html> — precisa do color-scheme direto no elemento,
+   mais um fallback explicito de cor pras <option>, ou o popup abre branco
+   com texto claro (ilegivel ate' passar o mouse e o navegador destacar). */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #12141d;
+  color: #e7e9ee;
+}
+
 /* Scrollbars — visible but unobtrusive, matches the dark surface palette. */
 * {
   scrollbar-width: thin;
