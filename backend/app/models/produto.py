@@ -40,8 +40,13 @@ class Produto(OrigemErpMixin, TimestampMixin, Base):
         pg_enum(UnidadeConcentracaoEnum, "unidade_concentracao_enum"), nullable=False
     )
     quantidade_embalagem: Mapped[int] = mapped_column(Integer, nullable=False)
+    # QA (fail-closed): default 'vermelha', não 'isento' — mesma regra do
+    # sync (app/integrations/sync.py::_mapear_tarja): se tarja não foi
+    # definida explicitamente por algum caminho, assume o mais restritivo,
+    # nunca o menos. ProdutoCreate exige tarja explicitamente, então este
+    # default é só rede de segurança (nunca deveria ser acionado via API).
     tarja: Mapped[TarjaEnum] = mapped_column(
-        pg_enum(TarjaEnum, "tarja_enum"), nullable=False, default=TarjaEnum.isento
+        pg_enum(TarjaEnum, "tarja_enum"), nullable=False, default=TarjaEnum.vermelha
     )
     # exige_prescricao é GENERATED ALWAYS AS (tarja <> 'isento') STORED no Postgres
     # (migration 0005) e é intencionalmente omitida deste mapeamento: o banco é

@@ -155,6 +155,7 @@ export function ResourceManager<T extends { id: string }>({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
@@ -184,13 +185,19 @@ export function ResourceManager<T extends { id: string }>({
     e.preventDefault();
     setSubmitting(true);
     setFormError(null);
+    setFieldErrors({});
     try {
       await api.post(endpoint, serialize(createFields, createValues));
       setShowCreate(false);
       setCreateValues(buildInitialValues(createFields));
       await load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.detail : "Falha ao criar registro");
+      if (err instanceof ApiError && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+        setFormError("Corrija os campos destacados abaixo.");
+      } else {
+        setFormError(err instanceof ApiError ? err.detail : "Falha ao criar registro");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -206,6 +213,7 @@ export function ResourceManager<T extends { id: string }>({
     setEditValues(values);
     setEditItem(item);
     setFormError(null);
+    setFieldErrors({});
   }
 
   async function handleEdit(e: React.FormEvent) {
@@ -213,12 +221,18 @@ export function ResourceManager<T extends { id: string }>({
     if (!editItem || !editFields) return;
     setSubmitting(true);
     setFormError(null);
+    setFieldErrors({});
     try {
       await api.patch(`${endpoint}/${editItem.id}`, serialize(editFields, editValues));
       setEditItem(null);
       await load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.detail : "Falha ao atualizar registro");
+      if (err instanceof ApiError && err.fieldErrors) {
+        setFieldErrors(err.fieldErrors);
+        setFormError("Corrija os campos destacados abaixo.");
+      } else {
+        setFormError(err instanceof ApiError ? err.detail : "Falha ao atualizar registro");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -242,7 +256,13 @@ export function ResourceManager<T extends { id: string }>({
           {description && <p className="text-sm text-slate-400">{description}</p>}
         </div>
         {allowCreate && (
-          <Button onClick={() => setShowCreate(true)}>
+          <Button
+            onClick={() => {
+              setFormError(null);
+              setFieldErrors({});
+              setShowCreate(true);
+            }}
+          >
             + Novo
           </Button>
         )}
@@ -332,7 +352,13 @@ export function ResourceManager<T extends { id: string }>({
           <form id="create-form" onSubmit={handleCreate} className="flex flex-col gap-4">
             {formError && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{formError}</div>}
             {createFields.map((field) => (
-              <FieldWrapper key={field.name} label={field.label} htmlFor={field.name} required={field.required}>
+              <FieldWrapper
+                key={field.name}
+                label={field.label}
+                htmlFor={field.name}
+                required={field.required}
+                error={fieldErrors[field.name]}
+              >
                 <FieldInput
                   field={field}
                   value={createValues[field.name]}
@@ -362,7 +388,13 @@ export function ResourceManager<T extends { id: string }>({
           <form id="edit-form" onSubmit={handleEdit} className="flex flex-col gap-4">
             {formError && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">{formError}</div>}
             {editFields.map((field) => (
-              <FieldWrapper key={field.name} label={field.label} htmlFor={field.name} required={field.required}>
+              <FieldWrapper
+                key={field.name}
+                label={field.label}
+                htmlFor={field.name}
+                required={field.required}
+                error={fieldErrors[field.name]}
+              >
                 <FieldInput
                   field={field}
                   value={editValues[field.name]}

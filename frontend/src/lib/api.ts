@@ -23,11 +23,17 @@ const REQUEST_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_REQUEST_TIMEOUT_MS ?? 
 export class ApiError extends Error {
   status: number;
   detail: string;
+  // QA: erro por campo (422 de validação do Pydantic) — permite o form
+  // mostrar a mensagem embaixo do campo certo em vez de só um banner
+  // genérico no topo. Ausente em erros de negócio (409/403/...), que não
+  // têm um campo específico associado.
+  fieldErrors?: Record<string, string>;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, fieldErrors?: Record<string, string>) {
     super(detail);
     this.status = status;
     this.detail = detail;
+    this.fieldErrors = fieldErrors;
   }
 }
 
@@ -58,6 +64,21 @@ function stringifyDetail(detail: unknown): string | undefined {
       .join("; ");
   }
   return JSON.stringify(detail);
+}
+
+// Mesma lista de erros de validação, mas indexada por campo (último item de
+// `loc`, que pula o "body" inicial) — undefined quando `detail` não é essa
+// forma (409 de negócio, string simples, etc.), nunca um objeto vazio.
+function extractFieldErrors(detail: unknown): Record<string, string> | undefined {
+  if (!Array.isArray(detail)) return undefined;
+  const map: Record<string, string> = {};
+  for (const item of detail as ValidationErrorItem[]) {
+    const field = item.loc?.[item.loc.length - 1];
+    if (typeof field === "string" && item.msg) {
+      map[field] = item.msg;
+    }
+  }
+  return Object.keys(map).length > 0 ? map : undefined;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -95,13 +116,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     let detail = response.statusText;
+    let fieldErrors: Record<string, string> | undefined;
     try {
       const body = await response.json();
       detail = stringifyDetail(body.detail) ?? detail;
+      fieldErrors = extractFieldErrors(body.detail);
     } catch {
       // corpo nao era JSON, mantem statusText
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, fieldErrors);
   }
 
   if (response.status === 204) {
