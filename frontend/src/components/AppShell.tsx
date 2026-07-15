@@ -1,26 +1,41 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { getToken } from "@/lib/api";
 
 const ROTAS_PUBLICAS = ["/login"];
 
+function subscribeNoop() {
+  return () => {};
+}
+
+// localStorage não existe no servidor — useSyncExternalStore é a forma
+// correta de ler uma fonte externa dessas sem gerar hydration mismatch:
+// o snapshot do servidor (segundo argumento) é sempre "sem token", e o
+// React reconcilia sozinho a troca pro valor real assim que hidrata,
+// sem precisar de um efeito "mounted" pra isso.
+function useTemToken(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => getToken() !== null,
+    () => false,
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const publica = ROTAS_PUBLICAS.includes(pathname);
-  // Leitura síncrona (não é estado): getToken() devolve null no SSR e o
-  // valor real assim que hidrata no cliente, sem precisar de um efeito só
-  // pra guardar algo que já dá pra derivar direto do localStorage.
-  const autenticado = publica || getToken() !== null;
+  const temToken = useTemToken();
+  const autenticado = publica || temToken;
 
   useEffect(() => {
-    if (!publica && getToken() === null) {
+    if (!publica && !temToken) {
       router.replace("/login");
     }
-  }, [pathname, publica, router]);
+  }, [pathname, publica, temToken, router]);
 
   if (publica) {
     return <>{children}</>;

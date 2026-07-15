@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Estoque, Produto, LogAuditoria } from "@/lib/types";
 
 interface Kpis {
@@ -18,9 +18,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
+        // Teto de paginação do backend (SEC-07) é 100 — ver
+        // app/api/v1/pagination.py. KPIs aqui são uma contagem aproximada
+        // sobre a primeira página, não uma contagem exata da tabela inteira.
         const [produtos, estoque, logs] = await Promise.all([
-          api.get<Produto[]>("/produtos?limit=200"),
-          api.get<Estoque[]>("/estoque?limit=200"),
+          api.get<Produto[]>("/produtos?limit=100"),
+          api.get<Estoque[]>("/estoque?limit=100"),
           api.get<LogAuditoria[]>("/auditoria?limit=8"),
         ]);
         setKpis({
@@ -28,11 +31,13 @@ export default function DashboardPage() {
           posicoesComSaldo: estoque.filter((e) => e.quantidade_atual > 0).length,
           logsRecentes: logs,
         });
-      } catch {
+      } catch (err) {
         setErro(
-          "Não foi possível conectar ao backend. Confirme que a API está rodando em " +
-            (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1") +
-            ".",
+          err instanceof ApiError
+            ? err.detail
+            : "Não foi possível conectar ao backend. Confirme que a API está rodando em " +
+                (process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1") +
+                ".",
         );
       }
     }
