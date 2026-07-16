@@ -1,19 +1,14 @@
-describe("Atendimento (Avatar) — fluxo mockado", () => {
-  // O LLM real é pago e sujeito a cota (já vimos isso acontecer de verdade em
-  // produção). Um teste E2E não deve depender de uma API externa de terceiros
-  // para ser determinístico — aqui mockamos a resposta do backend e testamos
-  // só o contrato da UI: renderizar a sugestão e disparar a confirmação de compra.
+describe("Totem — fluxo mockado", () => {
   const sessaoId = "11111111-1111-1111-1111-111111111111";
   const produtoId = "22222222-2222-2222-2222-222222222222";
 
   beforeEach(() => {
-    cy.intercept("GET", "**/filiais", [{ id: "filial-1", nome: "Farmácia Central" }]).as("filiais");
-    cy.intercept("GET", "**/clientes", []).as("clientes");
-    cy.visitAutenticado("/atendimento");
-    cy.wait("@filiais");
+    cy.visit("/totem");
   });
 
-  it("mostra a sugestão do avatar e confirma a compra", () => {
+  it("esconde seletor de filial/cliente e roda o fluxo de compra", () => {
+    cy.get("select").should("not.exist");
+
     cy.intercept("POST", "**/chat/atendimento", (req) => {
       if (req.body.confirmar_compra) {
         req.reply({
@@ -48,19 +43,19 @@ describe("Atendimento (Avatar) — fluxo mockado", () => {
       }
     }).as("chatAtendimento");
 
-    cy.get("select").first().find("option").its("length").should("be.gt", 1);
-    cy.get("select").first().select(1);
-
     cy.get('input[placeholder*="dor de cabeça"]').type("Estou com dor de cabeça e febre");
     cy.contains("button", "Enviar").click();
 
     cy.wait("@chatAtendimento");
     cy.contains("Dipirona 500mg disponível").should("be.visible");
-    cy.contains("Dipirona 500mg").should("be.visible");
     cy.contains("button", "Confirmar compra").should("be.visible").click();
 
     cy.wait("@chatAtendimento");
     cy.contains("Compra confirmada!").should("be.visible");
     cy.contains("Venda registrada").should("be.visible");
+
+    // DELAY_APOS_VENDA_MS (6s): a tela reseta sozinha para o próximo cliente.
+    cy.contains("Venda registrada", { timeout: 8000 }).should("not.exist");
+    cy.contains("Descreva um sintoma").should("be.visible");
   });
 });

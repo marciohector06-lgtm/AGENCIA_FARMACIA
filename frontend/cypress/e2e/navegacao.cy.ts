@@ -1,6 +1,6 @@
 describe("Navegação do dashboard", () => {
   it("mostra o menu lateral e carrega a home", () => {
-    cy.visit("/");
+    cy.visitAutenticadoReal("/");
     cy.contains("h1", "Dashboard").should("be.visible");
     cy.contains("Farmácia MAS").should("be.visible");
     cy.get('a[href="/produtos"]').should("be.visible");
@@ -21,7 +21,7 @@ describe("Navegação do dashboard", () => {
       { href: "/atendimento", titulo: "Atendimento (Avatar)" },
     ];
 
-    cy.visit("/");
+    cy.visitAutenticadoReal("/");
     for (const rota of rotas) {
       cy.get(`a[href="${rota.href}"]`).click();
       cy.url().should("include", rota.href);

@@ -6,7 +6,7 @@ describe("CRUD de Filiais (backend real)", () => {
   const nomeEditado = `Filial Cypress Renomeada ${Date.now()}`;
 
   it("cria, edita e remove uma filial", () => {
-    cy.visit("/filiais");
+    cy.visitAutenticadoReal("/filiais");
     // Esperar o fetch inicial (client-side, só roda pós-hidratação) terminar
     // antes de clicar — clicar cedo demais pode acontecer antes do onClick
     // estar conectado.

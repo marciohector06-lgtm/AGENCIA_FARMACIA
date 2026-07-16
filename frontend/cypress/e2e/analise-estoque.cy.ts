@@ -25,7 +25,7 @@ describe("Análise de Estoque — fluxo mockado", () => {
       },
     }).as("analiseEstoque");
 
-    cy.visit("/agentes/analise-estoque");
+    cy.visitAutenticadoReal("/agentes/analise-estoque");
     cy.contains("button", "Rodar Análise").click();
 
     cy.wait("@analiseEstoque");

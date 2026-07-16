@@ -5,7 +5,7 @@ describe("Cadeia de cadastro: Fabricante -> Princípio Ativo -> Produto (backend
   const nomeProduto = `Produto Cypress ${sufixo}`;
 
   it("cadastra um fabricante", () => {
-    cy.visit("/fabricantes");
+    cy.visitAutenticadoReal("/fabricantes");
     // "Carregando..." só some depois que o efeito de fetch (client-side) roda,
     // o que só acontece após a hidratação — esperar por isso (em vez de só
     // pelo <h1>, que já vem no HTML do servidor) evita clicar em "+ Novo"
@@ -18,7 +18,7 @@ describe("Cadeia de cadastro: Fabricante -> Princípio Ativo -> Produto (backend
   });
 
   it("cadastra um princípio ativo", () => {
-    cy.visit("/principios-ativos");
+    cy.visitAutenticadoReal("/principios-ativos");
     cy.contains("Carregando...").should("not.exist");
     cy.contains("button", "+ Novo").click();
     cy.get("#nome").type(nomePrincipio);
@@ -28,7 +28,7 @@ describe("Cadeia de cadastro: Fabricante -> Princípio Ativo -> Produto (backend
   });
 
   it("cadastra um produto usando os selects dinâmicos de fabricante e princípio ativo", () => {
-    cy.visit("/produtos");
+    cy.visitAutenticadoReal("/produtos");
     cy.contains("Carregando...").should("not.exist");
     cy.contains("button", "+ Novo").click();
     cy.get("#nome_comercial").type(nomeProduto);
@@ -51,14 +51,20 @@ describe("Cadeia de cadastro: Fabricante -> Princípio Ativo -> Produto (backend
     // farmácia se desativa, não se apaga) — e o fabricante fica preso por FK
     // RESTRICT enquanto o produto existir. A limpeza possível é desativar o
     // produto (ativo=false), igual um dono da farmácia faria de verdade.
-    const apiUrl = Cypress.env("apiUrl") || "http://127.0.0.1:8000/api/v1";
-    cy.request("GET", `${apiUrl}/produtos`).then((res) => {
-      const alvo = (res.body as { id: string; nome_comercial: string }[]).find(
-        (p) => p.nome_comercial === nomeProduto,
-      );
-      if (alvo) {
-        cy.request("PATCH", `${apiUrl}/produtos/${alvo.id}`, { ativo: false });
-      }
+    const apiUrl = Cypress.env("apiUrl") || "http://127.0.0.1:8001/api/v1";
+    cy.request("POST", `${apiUrl}/auth/login`, {
+      email: "operador@farmacia.local",
+      senha: "CHANGE_ME_OPERADOR",
+    }).then(({ body }) => {
+      const headers = { Authorization: `Bearer ${body.access_token}` };
+      cy.request({ method: "GET", url: `${apiUrl}/produtos`, headers }).then((res) => {
+        const alvo = (res.body as { id: string; nome_comercial: string }[]).find(
+          (p) => p.nome_comercial === nomeProduto,
+        );
+        if (alvo) {
+          cy.request({ method: "PATCH", url: `${apiUrl}/produtos/${alvo.id}`, headers, body: { ativo: false } });
+        }
+      });
     });
   });
 });
