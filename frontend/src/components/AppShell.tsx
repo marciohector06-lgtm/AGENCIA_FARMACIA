@@ -5,7 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { getToken } from "@/lib/api";
 
-const ROTAS_PUBLICAS = ["/login"];
+// /totem: tela de atendimento do cliente na loja, tablet sem conta
+// administrativa logada — precisa ficar fora do guard de auth e do chrome
+// (Sidebar/header) igual ao /login. Segurança fica no backend: rate limit e
+// LGPD em /chat/atendimento, e o totem nunca chama endpoints administrativos.
+const ROTAS_PUBLICAS = ["/login", "/totem"];
 
 function subscribeNoop() {
   return () => {};
