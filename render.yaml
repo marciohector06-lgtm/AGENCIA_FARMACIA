@@ -1,7 +1,12 @@
 services:
+  # TROCAR PRA "starter" ANTES DO TOTEM FÍSICO NA FARMÁCIA: free dorme após
+  # ~15min sem tráfego (cold start ~30-50s por serviço) — inaceitável com
+  # cliente real parado na frente do tablet. Ok por enquanto: piloto de casa,
+  # esporádico, com o Márcio testando (ver DIVIDA_TECNICA.md).
   - type: web
     name: agencia-farmacia-backend
     runtime: python
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -28,5 +33,29 @@ services:
         value: "90"
       - key: DB_SSL_REQUIRE
         value: "true"
+      # Pré-preenchido com a URL prevista do serviço "agencia-farmacia-frontend"
+      # abaixo (Render deriva a URL do "name:" quando ele não colide com um já
+      # existente). CONFIRME a URL real no dashboard depois do primeiro deploy
+      # e corrija aqui se o Render tiver sufixado o nome por colisão.
       - key: CORS_ORIGINS
+        value: '["https://agencia-farmacia-frontend.onrender.com"]'
+
+  # Mesmo motivo do comentário acima — troque pra "starter" junto com o backend.
+  - type: web
+    name: agencia-farmacia-frontend
+    runtime: node
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npx next start -H 0.0.0.0 -p $PORT
+    envVars:
+      # Mesma lógica do CORS_ORIGINS acima, espelhada: aponta pra URL prevista
+      # do serviço de backend. Confirme/corrija após o primeiro deploy.
+      - key: NEXT_PUBLIC_API_URL
+        value: https://agencia-farmacia-backend.onrender.com/api/v1
+      # De propósito vazia — só existe uma filial de produção depois que o
+      # backend estiver no ar (POST /api/v1/filiais). Preencher e forçar um
+      # redeploy (rebuild, não só restart — NEXT_PUBLIC_* é inlined em build
+      # time) assim que o id existir.
+      - key: NEXT_PUBLIC_TOTEM_FILIAL_ID
         sync: false
