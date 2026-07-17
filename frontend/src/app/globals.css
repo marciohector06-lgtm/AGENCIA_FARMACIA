@@ -92,3 +92,36 @@ select option:hover {
   background-color: rgba(15, 23, 42, 0.28);
   background-clip: content-box;
 }
+
+/* Totem: "respiração" sutil da farmacêutica parada (estado esperando) — só
+   0.5% de variação de escala, ciclo lento, pra não competir com o cliente
+   lendo a tela. */
+@keyframes avatar-respirar {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.005);
+  }
+}
+
+.animate-respirar {
+  animation: avatar-respirar 4s ease-in-out infinite;
+}
+
+/* Totem: ondas de som do indicador "ouvindo" — 5 barras com atraso
+   escalonado, cada uma oscilando de altura independente. */
+@keyframes onda-som {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-onda-som {
+  animation: onda-som 0.9s ease-in-out infinite;
+}

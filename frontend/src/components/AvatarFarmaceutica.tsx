@@ -12,11 +12,12 @@ interface AvatarFarmaceuticaProps {
   estado: EstadoAvatar;
 }
 
-// Todos os 5 quadros ficam empilhados (position: absolute, mesmo lugar) e a
-// troca de estado só alterna qual tem opacity-100 — dá o crossfade suave
-// pedido (transition-opacity) sem o "pisca" que trocar o src de uma única
-// <img> causaria, e sem esperar a imagem carregar no meio da troca (todas já
-// estão na página, pré-carregadas).
+// Preenche 100% do container do totem (object-cover, tela cheia — ver
+// TotemAvatarExperience). Todos os 5 quadros ficam empilhados (position:
+// absolute, mesmo lugar) e a troca de estado só alterna qual tem
+// opacity-100 — dá o crossfade suave sem o "pisca" que trocar o src de uma
+// única <img> causaria, e sem esperar a imagem carregar no meio da troca
+// (todas já estão na página, pré-carregadas).
 export function AvatarFarmaceutica({ estado }: AvatarFarmaceuticaProps) {
   const [bocaAberta, setBocaAberta] = useState(false);
 
@@ -37,7 +38,7 @@ export function AvatarFarmaceutica({ estado }: AvatarFarmaceuticaProps) {
   const quadroAtivo = estado === "falando" ? (bocaAberta ? "boca_aberta" : "boca_fechada") : estado;
 
   return (
-    <div className="relative mx-auto h-56 w-56 shrink-0 sm:h-72 sm:w-72">
+    <div className={`absolute inset-0 ${estado === "esperando" ? "animate-respirar" : ""}`}>
       {QUADROS.map((quadro) => (
         <Image
           key={quadro}
@@ -45,8 +46,8 @@ export function AvatarFarmaceutica({ estado }: AvatarFarmaceuticaProps) {
           alt="Farmacêutica virtual"
           fill
           priority={quadro === "esperando"}
-          sizes="(min-width: 640px) 288px, 224px"
-          className={`rounded-full object-cover shadow-lg transition-opacity duration-200 ${
+          sizes="100vw"
+          className={`object-cover transition-opacity duration-200 ${
             quadro === quadroAtivo ? "opacity-100" : "opacity-0"
           }`}
         />

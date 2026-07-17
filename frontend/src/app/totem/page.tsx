@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { AtendimentoPanel } from "@/components/atendimento/AtendimentoPanel";
+import { TotemAvatarExperience } from "@/components/totem/TotemAvatarExperience";
 import { useIdleReset } from "@/lib/useIdleReset";
 
 // Cada totem físico atende uma filial fixa, configurada no deploy daquele
@@ -14,7 +14,7 @@ const TIMEOUT_INATIVIDADE_MS = 60_000;
 const DELAY_APOS_VENDA_MS = 6_000;
 
 export default function TotemPage() {
-  // Trocar a key força o React a desmontar e remontar o AtendimentoPanel
+  // Trocar a key força o React a desmontar e remontar o TotemAvatarExperience
   // inteiro — garante que nenhum estado do cliente anterior (mensagens,
   // input, sessão) sobrevive pro próximo, sem precisar resetar campo a campo.
   const [sessaoKey, setSessaoKey] = useState(0);
@@ -44,18 +44,5 @@ export default function TotemPage() {
     );
   }
 
-  return (
-    <div className="flex h-screen flex-col gap-4 bg-white p-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Atendimento Farmacêutico</h1>
-        <p className="text-base text-slate-500">Toque no microfone ou digite sua dúvida para começar.</p>
-      </div>
-      <AtendimentoPanel
-        key={sessaoKey}
-        modoTotem
-        filialIdFixa={FILIAL_ID}
-        onVendaConfirmada={onVendaConfirmada}
-      />
-    </div>
-  );
+  return <TotemAvatarExperience key={sessaoKey} filialIdFixa={FILIAL_ID} onVendaConfirmada={onVendaConfirmada} />;
 }

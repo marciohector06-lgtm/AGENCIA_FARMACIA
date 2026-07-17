@@ -4,23 +4,15 @@ import { Button } from "@/components/ui/Button";
 import { FieldWrapper, TextInput } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { AVISO_IA_TEXTO, useAtendimentoChat } from "@/lib/useAtendimentoChat";
-import { AvatarFarmaceutica, EstadoAvatar } from "@/components/AvatarFarmaceutica";
 import { ChatBubble } from "@/components/atendimento/ChatBubble";
 import { FilialClienteSelector } from "@/components/atendimento/FilialClienteSelector";
 import { MicIcon, SpeakerIcon, StopIcon } from "@/components/atendimento/icons";
 
-interface AtendimentoPanelProps {
-  // Totem: esconde seletor de filial/cliente, checkbox de auto-envio — o
-  // resto (chat, voz, consentimento, disclaimer) é o mesmo hook e os mesmos
-  // componentes usados em /atendimento.
-  modoTotem?: boolean;
-  // Obrigatório quando modoTotem=true — filial fixa configurada no deploy
-  // daquele tablet, nunca escolhida na tela.
-  filialIdFixa?: string;
-  onVendaConfirmada?: () => void;
-}
-
-export function AtendimentoPanel({ modoTotem = false, filialIdFixa, onVendaConfirmada }: AtendimentoPanelProps) {
+// Painel administrativo, usado só por /atendimento. /totem tem sua própria
+// experiência (TotemAvatarExperience) — visual completamente diferente,
+// mas construída sobre o mesmo hook useAtendimentoChat (voz, LGPD,
+// guardrails e confirmação de compra são idênticos nos dois).
+export function AtendimentoPanel() {
   const {
     filialId,
     setFilialId,
@@ -53,37 +45,23 @@ export function AtendimentoPanel({ modoTotem = false, filialIdFixa, onVendaConfi
     pararFala,
     enviarMensagem,
     confirmarCompra,
-  } = useAtendimentoChat({ filialIdFixa, onVendaConfirmada });
-
-  const tamanhoMic = modoTotem ? "h-24 w-24" : "h-14 w-14";
-  const tamanhoIconeMic = modoTotem ? "h-11 w-11" : "h-6 w-6";
-
-  // Prioridade pedida: ouvindo > pensando > falando > esperando — ex.: se o
-  // cliente começa a falar bem no instante em que a resposta anterior ainda
-  // está sendo lida, "ouvindo" vence visualmente.
-  const estadoAvatar: EstadoAvatar = gravando ? "ouvindo" : loading ? "pensando" : falando ? "falando" : "esperando";
+  } = useAtendimentoChat();
 
   return (
     <div className="flex h-full flex-1 flex-col gap-4">
-      {modoTotem && <AvatarFarmaceutica estado={estadoAvatar} />}
-
-      {!modoTotem && (
-        <FilialClienteSelector
-          filialId={filialId}
-          setFilialId={setFilialId}
-          clienteId={clienteId}
-          setClienteId={setClienteId}
-          filialDisabled={mensagens.length > 0}
-        />
-      )}
+      <FilialClienteSelector
+        filialId={filialId}
+        setFilialId={setFilialId}
+        clienteId={clienteId}
+        setClienteId={setClienteId}
+        filialDisabled={mensagens.length > 0}
+      />
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-lg">
         <button
           type="button"
           onClick={() => setPerfilAberto((v) => !v)}
-          className={`flex w-full items-center justify-between px-4 py-2 font-medium text-slate-700 ${
-            modoTotem ? "text-lg py-3" : "text-sm"
-          }`}
+          className="flex w-full items-center justify-between px-4 py-2 text-sm font-medium text-slate-700"
         >
           Perfil clínico (opcional — preencha o que souber)
           <span className="text-slate-500">{perfilAberto ? "▲" : "▼"}</span>
@@ -124,17 +102,9 @@ export function AtendimentoPanel({ modoTotem = false, filialIdFixa, onVendaConfi
         )}
       </div>
 
-      <div
-        className={`flex flex-1 flex-col overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg ${
-          modoTotem ? "p-8" : "p-5"
-        }`}
-      >
+      <div className="flex flex-1 flex-col overflow-y-auto rounded-xl border border-slate-200 bg-white p-5 shadow-lg">
         {mensagens.length === 0 && (
-          <div
-            className={`flex flex-1 items-center justify-center text-center text-slate-500 ${
-              modoTotem ? "text-2xl" : "text-sm"
-            }`}
-          >
+          <div className="flex flex-1 items-center justify-center text-center text-sm text-slate-500">
             Descreva um sintoma ou peça um produto para começar a conversa.
           </div>
         )}
@@ -154,10 +124,6 @@ export function AtendimentoPanel({ modoTotem = false, filialIdFixa, onVendaConfi
         <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{erro}</div>
       )}
 
-      {/* Banner de "Parar leitura" — visibilidade máxima de propósito (totem:
-          o cliente não pode esperar o áudio terminar pra fazer a próxima
-          pergunta). Cor deliberadamente fora da paleta branco/vermelho do
-          resto da interface, pra ficar inconfundível. */}
       {falando && (
         <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-slate-900 bg-slate-900 px-4 py-2.5 text-white shadow-lg">
           <span className="flex items-center gap-2 text-sm font-medium">
@@ -187,7 +153,6 @@ export function AtendimentoPanel({ modoTotem = false, filialIdFixa, onVendaConfi
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ex: estou com dor de cabeça e febre, o que vocês têm?"
           disabled={loading || precisaConsentimento}
-          className={modoTotem ? "py-4 text-lg" : undefined}
         />
         {/* Fallback gracioso: se o navegador não suporta SpeechRecognition
             (ex.: Firefox), o botão nem aparece — só o campo de texto normal. */}
@@ -198,26 +163,19 @@ export function AtendimentoPanel({ modoTotem = false, filialIdFixa, onVendaConfi
             disabled={loading || precisaConsentimento}
             aria-label={gravando ? "Parar gravação" : "Falar com o Avatar"}
             title={gravando ? "Parar gravação" : "Falar com o Avatar"}
-            className={`flex ${tamanhoMic} shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               gravando ? "animate-pulse bg-red-600" : "bg-slate-700 hover:bg-slate-800"
             }`}
           >
-            <MicIcon className={tamanhoIconeMic} />
+            <MicIcon className="h-6 w-6" />
           </button>
         )}
-        <Button
-          type="submit"
-          disabled={loading || precisaConsentimento}
-          className={modoTotem ? "px-6 text-lg" : undefined}
-        >
+        <Button type="submit" disabled={loading || precisaConsentimento}>
           Enviar
         </Button>
       </form>
 
-      {/* No totem o auto-envio fica sempre desligado e sem controle na tela
-          — nunca dispara sem um toque explícito em "Enviar" (ver comentário
-          no hook). */}
-      {micSuportado && !modoTotem && (
+      {micSuportado && (
         <label className="-mt-2 flex items-center gap-1.5 self-start text-xs text-slate-500">
           <input type="checkbox" checked={autoEnvio} onChange={(e) => setAutoEnvio(e.target.checked)} />
           Enviar automaticamente 1.5s após parar de falar
@@ -226,8 +184,7 @@ export function AtendimentoPanel({ modoTotem = false, filialIdFixa, onVendaConfi
 
       {/* LGPD-03: primeira interação com um cliente identificado que ainda
           não consentiu — bloqueia o chat até aceitar (a garantia real é o
-          403 do backend; isto é só a UX). O totem nunca identifica cliente,
-          então nunca cai aqui. */}
+          403 do backend; isto é só a UX). */}
       {precisaConsentimento && (
         <Modal
           title="Antes de continuar"
