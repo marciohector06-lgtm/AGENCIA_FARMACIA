@@ -11,6 +11,11 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      # Precedência mais alta pra versão do Python no Render (acima do arquivo
+      # backend/.python-version) — crewai>=1.15 não suporta 3.14, que é o
+      # default atual do Render se isto não for fixado.
+      - key: PYTHON_VERSION
+        value: 3.12.9
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_URL_AGENTE_ATENDENTE
