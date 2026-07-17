@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { FieldWrapper, TextInput } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
 import { AVISO_IA_TEXTO, useAtendimentoChat } from "@/lib/useAtendimentoChat";
+import { AvatarFarmaceutica, EstadoAvatar } from "@/components/AvatarFarmaceutica";
 import { ChatBubble } from "@/components/atendimento/ChatBubble";
 import { FilialClienteSelector } from "@/components/atendimento/FilialClienteSelector";
 import { MicIcon, SpeakerIcon, StopIcon } from "@/components/atendimento/icons";
@@ -57,8 +58,15 @@ export function AtendimentoPanel({ modoTotem = false, filialIdFixa, onVendaConfi
   const tamanhoMic = modoTotem ? "h-24 w-24" : "h-14 w-14";
   const tamanhoIconeMic = modoTotem ? "h-11 w-11" : "h-6 w-6";
 
+  // Prioridade pedida: ouvindo > pensando > falando > esperando — ex.: se o
+  // cliente começa a falar bem no instante em que a resposta anterior ainda
+  // está sendo lida, "ouvindo" vence visualmente.
+  const estadoAvatar: EstadoAvatar = gravando ? "ouvindo" : loading ? "pensando" : falando ? "falando" : "esperando";
+
   return (
     <div className="flex h-full flex-1 flex-col gap-4">
+      {modoTotem && <AvatarFarmaceutica estado={estadoAvatar} />}
+
       {!modoTotem && (
         <FilialClienteSelector
           filialId={filialId}
