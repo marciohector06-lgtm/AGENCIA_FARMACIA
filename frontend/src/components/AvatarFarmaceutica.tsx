@@ -10,15 +10,22 @@ const QUADROS = ["esperando", "ouvindo", "pensando", "boca_fechada", "boca_abert
 
 interface AvatarFarmaceuticaProps {
   estado: EstadoAvatar;
+  // "cover" (padrão): preenche o container cortando o que exceder — usado no
+  // modo fullscreen, onde a foto ocupa a tela toda. "contain": mostra a
+  // imagem inteira sem cortar — usado no modo cartoon, onde o personagem
+  // tem fundo limpo e precisa aparecer inteiro (corpo visível) dentro de um
+  // container menor. Quem decide o tamanho/posição desse container é sempre
+  // quem chama este componente (TotemFullscreenLayout / TotemCartoonLayout),
+  // nunca este arquivo — ele só cuida do crossfade entre os 5 quadros.
+  objectFit?: "cover" | "contain";
 }
 
-// Preenche 100% do container do totem (object-cover, tela cheia — ver
-// TotemAvatarExperience). Todos os 5 quadros ficam empilhados (position:
-// absolute, mesmo lugar) e a troca de estado só alterna qual tem
-// opacity-100 — dá o crossfade suave sem o "pisca" que trocar o src de uma
-// única <img> causaria, e sem esperar a imagem carregar no meio da troca
-// (todas já estão na página, pré-carregadas).
-export function AvatarFarmaceutica({ estado }: AvatarFarmaceuticaProps) {
+// Todos os 5 quadros ficam empilhados (position: absolute, mesmo lugar) e a
+// troca de estado só alterna qual tem opacity-100 — dá o crossfade suave sem
+// o "pisca" que trocar o src de uma única <img> causaria, e sem esperar a
+// imagem carregar no meio da troca (todas já estão na página,
+// pré-carregadas).
+export function AvatarFarmaceutica({ estado, objectFit = "cover" }: AvatarFarmaceuticaProps) {
   const [bocaAberta, setBocaAberta] = useState(false);
 
   useEffect(() => {
@@ -47,7 +54,7 @@ export function AvatarFarmaceutica({ estado }: AvatarFarmaceuticaProps) {
           fill
           priority={quadro === "esperando"}
           sizes="100vw"
-          className={`object-cover transition-opacity duration-200 ${
+          className={`${objectFit === "cover" ? "object-cover" : "object-contain"} transition-opacity duration-200 ${
             quadro === quadroAtivo ? "opacity-100" : "opacity-0"
           }`}
         />
