@@ -35,7 +35,7 @@ services:
       - key: ERP_PROVIDER
         value: mock
       - key: CREW_TIMEOUT_SECONDS
-        value: "90"
+        value: "40"
       - key: DB_SSL_REQUIRE
         value: "true"
       # Pré-preenchido com a URL prevista do serviço "agencia-farmacia-frontend"

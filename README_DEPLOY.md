@@ -40,9 +40,24 @@ serem rotacionadas — rotação documentada em
 | Variável | Valor | Por quê |
 |---|---|---|
 | `ERP_PROVIDER` | `mock` | Único adapter implementado até agora (`app/integrations/mock_adapter.py`) |
-| `CREW_TIMEOUT_SECONDS` | `90` | Timeout de `crew.kickoff()` (LLM-05) |
+| `CREW_TIMEOUT_SECONDS` | `40` | Timeout de `crew.kickoff()` (LLM-05) — ver aviso abaixo |
 | `DB_SSL_REQUIRE` | `true` | Supabase exige TLS em conexão direta |
 | `GEMINI_MODEL` | `gemini/gemini-flash-latest` | Ver aviso abaixo — isto sobrescreve o modelo de **todas** as roles, não só do Atendente |
+
+> **Por que `CREW_TIMEOUT_SECONDS=40` e não mais.** `executar_crew`
+> (`app/agents/execucao.py`, LLM-05) tenta a crew até 2 vezes
+> (`tentativas_max`), cada tentativa com até `CREW_TIMEOUT_SECONDS` de
+> timeout — pior caso é `2 × CREW_TIMEOUT_SECONDS`. O proxy do Render (plano
+> free/starter) devolve **502 sem headers de CORS** se o backend não
+> responder a tempo, e um 502 sem CORS é bloqueado pelo navegador antes de
+> chegar no `fetch()` — o cliente nunca vê nem o fallback JSON do backend,
+> só um erro genérico de rede (foi o que aconteceu em 2026-07-18 com
+> `CREW_TIMEOUT_SECONDS=90`: pior caso 180s, bem acima do timeout do proxy
+> do Render). Com `40`, pior caso é 80s — mantém margem sob o timeout do
+> proxy mesmo com os dois modelos (`gemini-flash-latest`/`-pro-latest`)
+> ocasionalmente retentando por conta própria em cima de um 429 de cota.
+> Se subir esse valor de novo, confirme o timeout real do proxy no plano
+> Render em uso antes.
 
 > **Atenção — `GEMINI_MODEL` afeta mais roles do que parece.** O código
 > (`app/agents/config.py`) tem dois campos separados: `gemini_model` (default
