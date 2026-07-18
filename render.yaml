@@ -31,7 +31,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini/gemini-2.5-flash
+        value: gemini/gemini-flash-latest
       - key: ERP_PROVIDER
         value: mock
       - key: CREW_TIMEOUT_SECONDS

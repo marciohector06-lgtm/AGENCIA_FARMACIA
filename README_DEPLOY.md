@@ -42,20 +42,27 @@ serem rotacionadas — rotação documentada em
 | `ERP_PROVIDER` | `mock` | Único adapter implementado até agora (`app/integrations/mock_adapter.py`) |
 | `CREW_TIMEOUT_SECONDS` | `90` | Timeout de `crew.kickoff()` (LLM-05) |
 | `DB_SSL_REQUIRE` | `true` | Supabase exige TLS em conexão direta |
-| `GEMINI_MODEL` | `gemini/gemini-2.5-flash` | Ver aviso abaixo — isto sobrescreve o modelo de **todas** as roles, não só do Atendente |
+| `GEMINI_MODEL` | `gemini/gemini-flash-latest` | Ver aviso abaixo — isto sobrescreve o modelo de **todas** as roles, não só do Atendente |
 
 > **Atenção — `GEMINI_MODEL` afeta mais roles do que parece.** O código
 > (`app/agents/config.py`) tem dois campos separados: `gemini_model` (default
-> `gemini-2.5-pro`, usado por Gerente de Estoque/Financeiro/Orquestrador) e
-> `gemini_model_atendente` (default `gemini-2.5-flash`, só o Atendente — FASE 4,
-> decisão LLM-10: o Atendente não precisa do raciocínio pesado do Pro, os
-> demais precisam). A variável de ambiente `GEMINI_MODEL` só sobrescreve o
-> primeiro campo. Com o valor `gemini/gemini-2.5-flash` fixado no
+> `gemini-pro-latest`, usado por Gerente de Estoque/Financeiro/Orquestrador) e
+> `gemini_model_atendente` (default `gemini-flash-latest`, só o Atendente —
+> FASE 4, decisão LLM-10: o Atendente não precisa do raciocínio pesado do Pro,
+> os demais precisam). A variável de ambiente `GEMINI_MODEL` só sobrescreve o
+> primeiro campo. Com o valor `gemini/gemini-flash-latest` fixado no
 > `render.yaml`, **as quatro roles passam a usar Flash**, não só o Atendente —
 > isto reduz custo/latência mas também a qualidade de raciocínio das roles que
 > a FASE 4 decidiu manter em Pro. Se isso não for intencional, remova a
 > variável `GEMINI_MODEL` do `render.yaml` (cada role volta a usar seu default
 > de código) ou ajuste o valor.
+>
+> Os defaults usam os aliases `-latest` (em vez de uma versão numerada como
+> `gemini-2.5-flash`) de propósito: em 2026-07-18 a versão numerada parou de
+> responder (404 `NOT_FOUND`, "no longer available to new users") pra chaves
+> de projetos novos e derrubou o atendimento em produção — os aliases
+> acompanham automaticamente o modelo vigente da Google naquele nível,
+> evitando que isso se repita a cada aposentadoria de versão.
 
 ## 4. Migrations em produção
 

@@ -30,13 +30,17 @@ class AgentSettings(BaseSettings):
     gemini_api_key: str = ""
     groq_api_key: str = ""
 
-    # gemini-1.5-pro foi descontinuado pela Google; gemini-2.5-pro é o
-    # equivalente atual em capacidade de raciocínio. Ajustável via GEMINI_MODEL.
-    gemini_model: str = "gemini/gemini-2.5-pro"
+    # gemini-1.5-pro e gemini-2.5-pro/flash foram descontinuados pela Google
+    # (a versão numerada para de responder pra contas novas, 404 NOT_FOUND —
+    # foi o que quebrou o atendimento em produção em 2026-07-18). Usa os
+    # aliases -latest, que a Google migra automaticamente pro modelo vigente
+    # daquele nível — evita esse mesmo apagão a cada aposentadoria de versão.
+    # Ajustável via GEMINI_MODEL.
+    gemini_model: str = "gemini/gemini-pro-latest"
     # LLM-10: o atendente faz regra rígida + structured output em alto volume
     # (é o endpoint com rate limit mais alto, SEC-02) — não precisa do
     # raciocínio pesado do Pro. Gerente/financeiro/orquestrador continuam Pro.
-    gemini_model_atendente: str = "gemini/gemini-2.5-flash"
+    gemini_model_atendente: str = "gemini/gemini-flash-latest"
     groq_model: str = "groq/llama3-70b-8192"
 
     # LLM-05: timeout de crew.kickoff() — ver app/agents/execucao.py.

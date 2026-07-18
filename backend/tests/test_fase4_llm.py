@@ -410,10 +410,10 @@ def test_llm_model_id_atendente_resolve_flash_outras_roles_resolvem_pro() -> Non
         gemini_api_key="fake-key-de-teste",
     )
 
-    assert settings.llm_model_id(AgentRole.ATENDENTE) == "gemini/gemini-2.5-flash"
-    assert settings.llm_model_id(AgentRole.GERENTE_ESTOQUE) == "gemini/gemini-2.5-pro"
-    assert settings.llm_model_id(AgentRole.FINANCEIRO) == "gemini/gemini-2.5-pro"
-    assert settings.llm_model_id(AgentRole.ORQUESTRADOR) == "gemini/gemini-2.5-pro"
+    assert settings.llm_model_id(AgentRole.ATENDENTE) == "gemini/gemini-flash-latest"
+    assert settings.llm_model_id(AgentRole.GERENTE_ESTOQUE) == "gemini/gemini-pro-latest"
+    assert settings.llm_model_id(AgentRole.FINANCEIRO) == "gemini/gemini-pro-latest"
+    assert settings.llm_model_id(AgentRole.ORQUESTRADOR) == "gemini/gemini-pro-latest"
 
 
 def test_build_llm_aplica_o_modelo_resolvido_por_role(monkeypatch) -> None:
