@@ -636,7 +636,14 @@ def _run_atendimento_pesquisa(request: ChatAtendimentoRequest, sessao_id: uuid.U
         )
 
     tipo_decisao = TipoDecisaoEnum.sugestao_similar if produtos_validados else TipoDecisaoEnum.alerta_estoque
-    principio_ativo_id = uuid.UUID(saida.principio_ativo_id) if saida.principio_ativo_id else None
+    # Só usado pra referência no log de auditoria (nunca chega ao cliente) —
+    # um principio_ativo_id alucinado pelo LLM (não-UUID) não pode derrubar a
+    # resposta inteira, mesmo tratamento de "descarta e segue" do produto_id
+    # acima, só que aqui não há nem cliente pra avisar do descarte.
+    try:
+        principio_ativo_id = uuid.UUID(saida.principio_ativo_id) if saida.principio_ativo_id else None
+    except (ValueError, AttributeError, TypeError):
+        principio_ativo_id = None
     log_id = registrar_auditoria(
         role=AgentRole.ATENDENTE,
         tipo_decisao=tipo_decisao,
