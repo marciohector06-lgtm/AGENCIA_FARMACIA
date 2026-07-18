@@ -28,11 +28,16 @@ interface AvatarFarmaceuticaProps {
 export function AvatarFarmaceutica({ estado, objectFit = "cover" }: AvatarFarmaceuticaProps) {
   const [bocaAberta, setBocaAberta] = useState(false);
 
+  // Reseta a boca assim que o estado deixa de ser "falando" — ajuste durante
+  // o render (não em efeito) para não disparar um render em cascata.
+  const [estadoAnterior, setEstadoAnterior] = useState(estado);
+  if (estado !== estadoAnterior) {
+    setEstadoAnterior(estado);
+    if (estado !== "falando") setBocaAberta(false);
+  }
+
   useEffect(() => {
-    if (estado !== "falando") {
-      setBocaAberta(false);
-      return;
-    }
+    if (estado !== "falando") return;
     // Placeholder de "está falando" — alterna boca aberta/fechada num
     // intervalo fixo, sem relação com o áudio real. Lip-sync de verdade
     // entraria aqui: trocar este setInterval por quadros escolhidos a partir

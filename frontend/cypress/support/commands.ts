@@ -3,6 +3,7 @@
 const TOKEN_KEY = "farmacia_mas_token";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- augmentação de tipos do Cypress exige `namespace` (padrão oficial da lib)
   namespace Cypress {
     interface Chainable {
       /**

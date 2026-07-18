@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Farmácia MAS",
   description: "Painel de gestão e atendimento com agentes de IA",
+};
+
+export const viewport: Viewport = {
   // Reforça (via <meta name="color-scheme">, além do CSS) que os
   // controles nativos do navegador — inclusive o popup de <select> —
   // devem renderizar no tema claro. Alguns navegadores/versões honram

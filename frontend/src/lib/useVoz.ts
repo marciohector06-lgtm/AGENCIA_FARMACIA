@@ -43,6 +43,10 @@ export function useReconhecimentoVoz({ onTextoAtualizado, onSilencio }: UseRecon
   const silencioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Detecção de suporte do navegador só pode rodar no client — feito em
+    // efeito (não no render) de propósito, pra servidor e 1º render do
+    // client baterem (ambos "false") e não gerar mismatch de hidratação.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSuportado(typeof window !== "undefined" && !!(window.SpeechRecognition ?? window.webkitSpeechRecognition));
   }, []);
 
@@ -125,6 +129,9 @@ export function useSintese({ rate = 0.9 }: UseSinteseOptions = {}) {
   const [falando, setFalando] = useState(false);
 
   useEffect(() => {
+    // Mesmo motivo do useReconhecimentoVoz acima: detecção de suporte só no
+    // client, feita em efeito para servidor e 1º render baterem.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSuportado(typeof window !== "undefined" && "speechSynthesis" in window);
   }, []);
 

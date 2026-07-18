@@ -24,7 +24,6 @@ interface TotemAvatarExperienceProps {
 // TotemCartoonLayout, que nunca tocam o hook diretamente.
 export function TotemAvatarExperience({ filialIdFixa, onVendaConfirmada }: TotemAvatarExperienceProps) {
   const {
-    clienteId,
     setClienteId,
     precisaConsentimento,
     enviandoConsentimento,
@@ -61,13 +60,18 @@ export function TotemAvatarExperience({ filialIdFixa, onVendaConfirmada }: Totem
   const ultimaMensagem = mensagens[mensagens.length - 1];
   const produtosSugeridos = ultimaMensagem?.role === "avatar" ? (ultimaMensagem.produtos ?? []) : [];
 
-  // Legenda mostra só o último turno (não o histórico inteiro) e some
-  // sozinha depois de alguns segundos — mas só começa a contar depois que
-  // ela termina de falar, senão a legenda podia sumir no meio da fala.
+  // Mostra a legenda assim que chega um turno novo — ajuste durante o
+  // render (não em efeito) para não disparar um render em cascata.
+  const [mensagemAnterior, setMensagemAnterior] = useState(ultimaMensagem);
+  if (ultimaMensagem !== mensagemAnterior) {
+    setMensagemAnterior(ultimaMensagem);
+    if (ultimaMensagem) setLegendaVisivel(true);
+  }
+
+  // Some sozinha depois de alguns segundos — mas só começa a contar depois
+  // que ela termina de falar, senão a legenda podia sumir no meio da fala.
   useEffect(() => {
-    if (!ultimaMensagem) return;
-    setLegendaVisivel(true);
-    if (falando) return;
+    if (!ultimaMensagem || falando) return;
     const timer = setTimeout(() => setLegendaVisivel(false), DURACAO_LEGENDA_MS);
     return () => clearTimeout(timer);
   }, [ultimaMensagem, falando]);
