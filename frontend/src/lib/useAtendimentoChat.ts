@@ -74,7 +74,7 @@ export function useAtendimentoChat({ filialIdFixa, onVendaConfirmada }: UseAtend
       }
     },
   });
-  const { falando, falar, pararFala } = useSintese({ rate: 0.9 });
+  const { falando, bocaAberta, falar, pararFala } = useSintese({ rate: 0.9 });
 
   function pushMessage(msg: ChatMessage) {
     setMensagens((prev) => [...prev, msg]);
@@ -245,6 +245,7 @@ export function useAtendimentoChat({ filialIdFixa, onVendaConfirmada }: UseAtend
     micSuportado,
     gravando,
     falando,
+    bocaAberta,
     alternarGravacao,
     pararFala,
     enviarMensagem,

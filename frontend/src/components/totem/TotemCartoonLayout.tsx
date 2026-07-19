@@ -20,6 +20,7 @@ const LABEL_ESTADO: Partial<Record<EstadoAvatar, string>> = {
 // muda — nenhuma lógica aqui.
 export function TotemCartoonLayout({
   estadoAvatar,
+  bocaAberta,
   ultimaMensagem,
   legendaVisivel,
   erro,
@@ -67,7 +68,7 @@ export function TotemCartoonLayout({
           inteiro sem cortar (a imagem já vem com fundo branco/limpo, então
           funde com o bg-white do container sem precisar de máscara). */}
       <div className="relative h-[45%] w-full shrink-0 pt-14">
-        <AvatarFarmaceutica estado={estadoAvatar} objectFit="contain" />
+        <AvatarFarmaceutica estado={estadoAvatar} objectFit="contain" bocaAbertaExterna={bocaAberta} />
       </div>
 
       {/* Conversa/cards — faixa de baixo, fundo claro. */}

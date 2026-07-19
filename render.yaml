@@ -72,3 +72,17 @@ services:
       # time) assim que o id existir.
       - key: NEXT_PUBLIC_TOTEM_FILIAL_ID
         sync: false
+      # Síntese de voz do Avatar (ver src/app/api/tts/route.ts) — SEM prefixo
+      # NEXT_PUBLIC_ de propósito: só existe no processo Next server (Route
+      # Handler), nunca chega ao bundle do navegador. Sem isto configurado,
+      # /api/tts devolve 503 e useSintese (src/lib/useVoz.ts) cai pro
+      # SpeechSynthesis nativo do navegador, sem quebrar o atendimento.
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      # Opcional — se vazio, /api/tts escolhe a melhor voz feminina em pt-BR
+      # disponível na conta via GET /v1/voices (cacheado em memória pela vida
+      # do processo). Preencher trava numa voz específica e evita depender da
+      # permissão voices_read da chave (algumas chaves restritas só têm
+      # permissão de text_to_speech).
+      - key: ELEVENLABS_VOICE_ID
+        sync: false

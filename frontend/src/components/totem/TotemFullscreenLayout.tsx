@@ -18,6 +18,7 @@ const LABEL_ESTADO: Partial<Record<EstadoAvatar, string>> = {
 // (ver avatarConfig.ts — modo "fullscreen").
 export function TotemFullscreenLayout({
   estadoAvatar,
+  bocaAberta,
   ultimaMensagem,
   legendaVisivel,
   erro,
@@ -39,7 +40,7 @@ export function TotemFullscreenLayout({
 }: TotemLayoutProps) {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-slate-950">
-      <AvatarFarmaceutica estado={estadoAvatar} objectFit="cover" />
+      <AvatarFarmaceutica estado={estadoAvatar} objectFit="cover" bocaAbertaExterna={bocaAberta} />
 
       {/* Gradiente escuro só na faixa de baixo — dá contraste pro texto sem
           escurecer o rosto dela. */}

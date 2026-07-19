@@ -9,6 +9,9 @@ import { ProdutoSugerido } from "@/lib/types";
 // diretamente.
 export interface TotemLayoutProps {
   estadoAvatar: EstadoAvatar;
+  // Lip-sync real via ElevenLabs (ver useSintese em src/lib/useVoz.ts) —
+  // repassado direto pra AvatarFarmaceutica, ver bocaAbertaExterna lá.
+  bocaAberta: boolean | null;
   ultimaMensagem: ChatMessage | undefined;
   legendaVisivel: boolean;
   erro: string | null;

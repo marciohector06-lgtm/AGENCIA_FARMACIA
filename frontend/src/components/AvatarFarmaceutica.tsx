@@ -18,6 +18,13 @@ interface AvatarFarmaceuticaProps {
   // quem chama este componente (TotemFullscreenLayout / TotemCartoonLayout),
   // nunca este arquivo — ele só cuida do crossfade entre os 5 quadros.
   objectFit?: "cover" | "contain";
+  // Lip-sync real (ElevenLabs, ver useSintese em src/lib/useVoz.ts): quando
+  // presente (não-null/undefined), substitui o timer placeholder abaixo —
+  // vem do alinhamento por caractere devolvido junto do áudio, sincronizado
+  // contra o tempo de reprodução real. Ausente (undefined) ou null (sem
+  // áudio com alinhamento disponível no momento, ex.: fallback de
+  // SpeechSynthesis) mantém o piscar de intervalo fixo de sempre.
+  bocaAbertaExterna?: boolean | null;
 }
 
 // Todos os 5 quadros ficam empilhados (position: absolute, mesmo lugar) e a
@@ -25,28 +32,32 @@ interface AvatarFarmaceuticaProps {
 // o "pisca" que trocar o src de uma única <img> causaria, e sem esperar a
 // imagem carregar no meio da troca (todas já estão na página,
 // pré-carregadas).
-export function AvatarFarmaceutica({ estado, objectFit = "cover" }: AvatarFarmaceuticaProps) {
-  const [bocaAberta, setBocaAberta] = useState(false);
+export function AvatarFarmaceutica({ estado, objectFit = "cover", bocaAbertaExterna }: AvatarFarmaceuticaProps) {
+  const [bocaAbertaPlaceholder, setBocaAbertaPlaceholder] = useState(false);
+  // Lip-sync real (ElevenLabs) disponível: usa direto, sem rodar o timer
+  // placeholder abaixo. undefined (prop nem passada, ex.: AtendimentoPanel
+  // não usa Avatar) ou null (sem alinhamento disponível agora, ex.: fallback
+  // de SpeechSynthesis) mantém o piscar de intervalo fixo de sempre.
+  const temSincronismoReal = bocaAbertaExterna !== undefined && bocaAbertaExterna !== null;
 
   // Reseta a boca assim que o estado deixa de ser "falando" — ajuste durante
   // o render (não em efeito) para não disparar um render em cascata.
   const [estadoAnterior, setEstadoAnterior] = useState(estado);
   if (estado !== estadoAnterior) {
     setEstadoAnterior(estado);
-    if (estado !== "falando") setBocaAberta(false);
+    if (estado !== "falando") setBocaAbertaPlaceholder(false);
   }
 
   useEffect(() => {
-    if (estado !== "falando") return;
+    if (estado !== "falando" || temSincronismoReal) return;
     // Placeholder de "está falando" — alterna boca aberta/fechada num
-    // intervalo fixo, sem relação com o áudio real. Lip-sync de verdade
-    // entraria aqui: trocar este setInterval por quadros escolhidos a partir
-    // da análise do áudio da síntese de voz (ex.: amplitude ou visemas do
-    // useSintese em useVoz.ts) em vez de um piscar genérico.
-    const timer = setInterval(() => setBocaAberta((v) => !v), INTERVALO_BOCA_MS);
+    // intervalo fixo, sem relação com o áudio real. Usado só quando não há
+    // sincronismo real disponível (ver bocaAbertaExterna acima).
+    const timer = setInterval(() => setBocaAbertaPlaceholder((v) => !v), INTERVALO_BOCA_MS);
     return () => clearInterval(timer);
-  }, [estado]);
+  }, [estado, temSincronismoReal]);
 
+  const bocaAberta = temSincronismoReal ? bocaAbertaExterna : bocaAbertaPlaceholder;
   const quadroAtivo = estado === "falando" ? (bocaAberta ? "boca_aberta" : "boca_fechada") : estado;
 
   return (

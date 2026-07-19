@@ -46,6 +46,7 @@ export function TotemAvatarExperience({ filialIdFixa, onVendaConfirmada }: Totem
     micSuportado,
     gravando,
     falando,
+    bocaAberta,
     alternarGravacao,
     pararFala,
     enviarMensagem,
@@ -128,6 +129,7 @@ export function TotemAvatarExperience({ filialIdFixa, onVendaConfirmada }: Totem
     <>
       <Layout
         estadoAvatar={estadoAvatar}
+        bocaAberta={bocaAberta}
         ultimaMensagem={ultimaMensagem}
         legendaVisivel={legendaVisivel}
         erro={erro}
