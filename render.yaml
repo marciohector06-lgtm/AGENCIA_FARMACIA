@@ -26,6 +26,14 @@ services:
         sync: false
       - key: DATABASE_URL_AGENTE_ORQUESTRADOR
         sync: false
+      - key: DATABASE_URL_AGENTE_TRIBUTARIO
+        sync: false
+      - key: NFE_EMAIL_HOST
+        sync: false
+      - key: NFE_EMAIL_USER
+        sync: false
+      - key: NFE_EMAIL_PASSWORD
+        sync: false
       - key: JWT_SECRET_KEY
         sync: false
       - key: GEMINI_API_KEY

@@ -22,6 +22,9 @@ class ProdutoBase(BaseModel):
     nome_comercial: str
     codigo_barras: str | None = None
     registro_anvisa: str | None = None
+    # Agente Tributário: usado por IdentificarProdutosTool pra casar item de
+    # NF-e -> produto cadastrado.
+    ncm: str | None = None
     forma_farmaceutica: FormaFarmaceuticaEnum
     via_administracao: ViaAdministracaoEnum
     concentracao_valor: Decimal
@@ -66,6 +69,7 @@ class ProdutoUpdate(BaseModel):
     nome_comercial: str | None = None
     codigo_barras: str | None = None
     registro_anvisa: str | None = None
+    ncm: str | None = None
     forma_farmaceutica: FormaFarmaceuticaEnum | None = None
     via_administracao: ViaAdministracaoEnum | None = None
     concentracao_valor: Decimal | None = Field(default=None, gt=0)

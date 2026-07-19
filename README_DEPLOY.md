@@ -25,9 +25,11 @@ segredos reais do seu projeto Supabase:
 | `DATABASE_URL_AGENTE_ESTOQUE` | Role `agente_estoque` | Idem |
 | `DATABASE_URL_AGENTE_FINANCEIRO` | Role `agente_financeiro` | Idem |
 | `DATABASE_URL_AGENTE_ORQUESTRADOR` | Role `agente_orquestrador` | Idem |
+| `DATABASE_URL_AGENTE_TRIBUTARIO` | Role `agente_tributario` (criada na migration `0005`) | Idem |
 | `JWT_SECRET_KEY` | Gerar com `python -c "import secrets; print(secrets.token_urlsafe(32))"` | Nunca reaproveite a mesma chave de outro ambiente |
 | `GEMINI_API_KEY` | Google AI Studio / Google Cloud Console | Chave do provedor Gemini (o único usado em produção nesta fase) |
 | `CORS_ORIGINS` | Domínio real do frontend em produção, formato de lista JSON | Ex.: `["https://seu-frontend.vercel.app"]` — nunca `["*"]` |
+| `NFE_EMAIL_HOST`/`NFE_EMAIL_USER`/`NFE_EMAIL_PASSWORD` | Email corporativo (IMAP) que recebe as NF-e dos fornecedores | Opcional — vazio = `POST /agentes/processar-nfe-email` falha cedo com mensagem clara em vez de travar o resto do backend |
 
 As senhas das roles de agente (`agente_atendente`, `agente_estoque`,
 `agente_financeiro`, `agente_orquestrador`, `app_backend`) são as mesmas

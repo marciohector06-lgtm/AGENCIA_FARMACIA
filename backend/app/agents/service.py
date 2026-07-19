@@ -5,6 +5,7 @@ decisão autônoma seja persistida de forma determinística (nunca depende do LL
 
 import json
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -12,7 +13,12 @@ from crewai import Crew, Process, Task
 from crewai.crews.crew_output import CrewOutput
 from sqlalchemy import text
 
-from app.agents.agents_def import build_agente_atendente, build_agente_financeiro, build_agente_gerente_estoque
+from app.agents.agents_def import (
+    build_agente_atendente,
+    build_agente_financeiro,
+    build_agente_gerente_estoque,
+    build_agente_tributario,
+)
 from app.agents.audit import registrar_auditoria
 from app.agents.config import AgentRole, get_agent_settings
 from app.agents.db_sync import agent_session
@@ -25,6 +31,7 @@ from app.agents.schemas import (
     AnaliseEstoqueFinanceiroOutput,
     AnaliseEstoqueGerenteOutput,
     ConfirmacaoCompraOutput,
+    ProcessamentoNFeOutput,
     RespostaAtendimentoOutput,
 )
 from app.integrations.base import ERPIndisponivelError, ItemVendaParaERP, VendaParaERP
@@ -36,6 +43,7 @@ from app.models.movimentacao_estoque import MovimentacaoEstoque
 from app.models.venda import Venda, VendaItem
 from app.schemas.agentes import AnaliseEstoqueResponse, DecisaoPrecificacaoResumo
 from app.schemas.chat import ChatAtendimentoRequest, ChatAtendimentoResponse, ProdutoSugeridoResponse
+from app.schemas.notas_entrada import ProcessarNFeEmailResponse
 
 # CLIN-06: disclaimer fixo, nunca gerado pelo LLM — setado deterministicamente
 # em toda ChatAtendimentoResponse construída por este módulo.
@@ -306,6 +314,73 @@ def run_analise_estoque(filial_id: uuid.UUID | None, dias_vencimento: int = 60) 
         decisoes=decisoes_resumo,
         resumo=resumo_final,
         log_auditoria_ids=log_ids,
+    )
+
+
+def run_processar_nfe_email() -> ProcessarNFeEmailResponse:
+    """Agente Tributário (Bloco 1): dispara o crew que lê emails de NF-e
+    ainda não lidos, parseia, identifica produtos e grava cada nota como
+    'aguardando_confirmacao'. Nunca toca em lotes/estoque/movimentacoes —
+    isso só acontece em run_confirmar_entrada_nfe (endpoint separado,
+    app_backend, acionado por um humano)."""
+    inicio = datetime.now(timezone.utc)
+
+    def _criar_crew_tributario() -> Crew:
+        agente = build_agente_tributario(build_llm(temperature=0.1, role=AgentRole.TRIBUTARIO))
+        task = Task(
+            description=(
+                "Processe todas as NF-e recebidas por email ainda não lidas, seguindo "
+                "rigorosamente o fluxo do seu backstory: ler os emails, parsear cada XML, "
+                "identificar cada item no cadastro de produtos, e só então salvar cada nota "
+                "já com os produto_id resolvidos. Nunca toque em lotes, estoque ou "
+                "movimentacoes_estoque — isso é decisão humana, fora do seu escopo."
+            ),
+            expected_output=(
+                "Lista de notas processadas (chave_acesso, itens_total, itens_identificados, "
+                "erro) e um resumo textual do que foi feito, incluindo eventuais erros."
+            ),
+            agent=agente,
+            output_pydantic=ProcessamentoNFeOutput,
+        )
+        return Crew(agents=[agente], tasks=[task], process=Process.sequential, verbose=True)
+
+    execucao = executar_crew(
+        _criar_crew_tributario, modelo_llm=get_agent_settings().llm_model_id(AgentRole.TRIBUTARIO)
+    )
+    if execucao.resultado is None:
+        log_id = _registrar_falha_llm(
+            role=AgentRole.TRIBUTARIO, sessao_id=None, execucao=execucao, contexto="processar_nfe_email"
+        )
+        return ProcessarNFeEmailResponse(notas_processadas=0, resumo=FALLBACK_LLM_INDISPONIVEL, log_auditoria_id=log_id)
+
+    saida: ProcessamentoNFeOutput = execucao.resultado.pydantic  # type: ignore[assignment]
+
+    # LLM-01: nunca confia na contagem que o próprio LLM reporta no pydantic —
+    # reconta o que de fato foi persistido no banco desde o início desta
+    # execução (mesma família de guardrail já usada para o pagamento no fluxo
+    # do Atendente, via _extrair_resultado_tool/_tool_foi_chamada).
+    with agent_session(AgentRole.TRIBUTARIO) as session:
+        notas_confirmadas_no_banco = session.execute(
+            text("SELECT COUNT(*) FROM notas_fiscais_entrada WHERE recebido_em >= :inicio"),
+            {"inicio": inicio},
+        ).scalar_one()
+
+    log_id = registrar_auditoria(
+        role=AgentRole.TRIBUTARIO,
+        tipo_decisao=TipoDecisaoEnum.entrada_nfe_processada,
+        entidade_afetada="notas_fiscais_entrada",
+        decisao_tomada=saida.resumo,
+        dados_base={
+            "notas_reportadas_pelo_llm": [n.model_dump() for n in saida.notas],
+            "notas_confirmadas_no_banco": notas_confirmadas_no_banco,
+        },
+        modelo_llm=execucao.modelo_llm,
+        tokens_totais=execucao.tokens_totais,
+        latencia_ms=execucao.latencia_ms,
+    )
+
+    return ProcessarNFeEmailResponse(
+        notas_processadas=notas_confirmadas_no_banco, resumo=saida.resumo, log_auditoria_id=log_id
     )
 
 

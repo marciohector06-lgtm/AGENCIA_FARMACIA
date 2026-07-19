@@ -54,3 +54,15 @@ class ConfirmacaoCompraOutput(BaseModel):
     resposta_texto: str
     transacao_id: str | None = None
     nfe_chave: str | None = None
+
+
+class NotaProcessadaResumo(BaseModel):
+    chave_acesso: str
+    itens_total: int = 0
+    itens_identificados: int = 0
+    erro: str | None = None
+
+
+class ProcessamentoNFeOutput(BaseModel):
+    notas: list[NotaProcessadaResumo] = Field(default_factory=list)
+    resumo: str

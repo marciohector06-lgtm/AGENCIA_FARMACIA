@@ -9,6 +9,7 @@ class AgentRole(str, Enum):
     GERENTE_ESTOQUE = "gerente_estoque"
     FINANCEIRO = "financeiro"
     ORQUESTRADOR = "orquestrador"
+    TRIBUTARIO = "tributario"
 
 
 class AgentSettings(BaseSettings):
@@ -20,6 +21,7 @@ class AgentSettings(BaseSettings):
     database_url_agente_estoque: str
     database_url_agente_financeiro: str
     database_url_agente_orquestrador: str
+    database_url_agente_tributario: str
 
     # Mesma flag usada pelo backend (app/core/config.py): Supabase exige TLS em
     # conexão direta, mas um Postgres local de desenvolvimento normalmente não
@@ -46,12 +48,24 @@ class AgentSettings(BaseSettings):
     # LLM-05: timeout de crew.kickoff() — ver app/agents/execucao.py.
     crew_timeout_seconds: float = 90.0
 
+    # Agente Tributário (Bloco 1): credenciais IMAP do email corporativo que
+    # recebe as NF-e. Vazio por padrão — LerEmailNFesTool falha cedo e com
+    # mensagem clara se disparado sem isso configurado, em vez de um erro
+    # obscuro de conexão IMAP.
+    nfe_email_host: str = ""
+    nfe_email_user: str = ""
+    nfe_email_password: str = ""
+    # Só documentação/uso futuro por um cron — o Bloco 1 não agenda nada
+    # sozinho, só expõe o disparo manual (POST /agentes/processar-nfe-email).
+    nfe_horario_processamento: str = "18:00"
+
     def database_url_for(self, role: AgentRole) -> str:
         return {
             AgentRole.ATENDENTE: self.database_url_agente_atendente,
             AgentRole.GERENTE_ESTOQUE: self.database_url_agente_estoque,
             AgentRole.FINANCEIRO: self.database_url_agente_financeiro,
             AgentRole.ORQUESTRADOR: self.database_url_agente_orquestrador,
+            AgentRole.TRIBUTARIO: self.database_url_agente_tributario,
         }[role]
 
     def llm_model_id(self, role: AgentRole | None = None) -> str:

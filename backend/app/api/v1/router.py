@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     fabricantes,
     filiais,
     lotes,
+    notas_entrada,
     precificacao,
     principios_ativos,
     produtos,
@@ -41,5 +42,6 @@ protegido_router.include_router(clientes.router)
 protegido_router.include_router(agentes.router)
 protegido_router.include_router(auditoria.router)
 protegido_router.include_router(precificacao.router)
+protegido_router.include_router(notas_entrada.router)
 
 api_router.include_router(protegido_router)

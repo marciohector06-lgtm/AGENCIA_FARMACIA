@@ -7,6 +7,7 @@ from app.models.filial import Filial
 from app.models.log_auditoria import LogAuditoria
 from app.models.lote import Lote
 from app.models.movimentacao_estoque import MovimentacaoEstoque
+from app.models.nota_fiscal_entrada import NotaFiscalEntrada, NotaFiscalEntradaItem
 from app.models.operador import Operador
 from app.models.precificacao_historico import PrecificacaoHistorico
 from app.models.principio_ativo import PrincipioAtivo
@@ -24,6 +25,8 @@ __all__ = [
     "LogAuditoria",
     "Lote",
     "MovimentacaoEstoque",
+    "NotaFiscalEntrada",
+    "NotaFiscalEntradaItem",
     "Operador",
     "PrecificacaoHistorico",
     "PrincipioAtivo",

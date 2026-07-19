@@ -29,6 +29,10 @@ class Produto(OrigemErpMixin, TimestampMixin, Base):
     nome_comercial: Mapped[str] = mapped_column(String(150), nullable=False)
     codigo_barras: Mapped[str | None] = mapped_column(String(14), unique=True)
     registro_anvisa: Mapped[str | None] = mapped_column(String(30))
+    # Agente Tributário (migration 0005): usado por IdentificarProdutosTool
+    # para casar item de NF-e -> produto cadastrado. Nullable — cadastro
+    # existente não tem esse dado retroativamente.
+    ncm: Mapped[str | None] = mapped_column(String(10))
     forma_farmaceutica: Mapped[FormaFarmaceuticaEnum] = mapped_column(
         pg_enum(FormaFarmaceuticaEnum, "forma_farmaceutica_enum"), nullable=False
     )

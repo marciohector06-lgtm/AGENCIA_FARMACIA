@@ -69,6 +69,7 @@ class TipoAgenteEnum(str, enum.Enum):
     gerente_estoque = "gerente_estoque"
     financeiro = "financeiro"
     orquestrador = "orquestrador"
+    tributario = "tributario"
 
 
 class TipoDecisaoEnum(str, enum.Enum):
@@ -80,6 +81,7 @@ class TipoDecisaoEnum(str, enum.Enum):
     recomendacao_giro = "recomendacao_giro"
     resolucao_conflito = "resolucao_conflito"
     alteracao_tarja = "alteracao_tarja"  # FASE 0 (migration 0019): endpoint privilegiado de tarja
+    entrada_nfe_processada = "entrada_nfe_processada"  # Agente Tributário (migration 0005)
 
 
 class TipoMovimentacaoEnum(str, enum.Enum):
@@ -87,6 +89,7 @@ class TipoMovimentacaoEnum(str, enum.Enum):
     venda = "venda"
     ajuste = "ajuste"
     sincronizacao_erp = "sincronizacao_erp"
+    entrada_nfe = "entrada_nfe"
 
 
 class StatusConfirmacaoVendaEnum(str, enum.Enum):
@@ -103,6 +106,18 @@ class StatusAprovacaoEnum(str, enum.Enum):
     aprovado = "aprovado"
     rejeitado = "rejeitado"
     auto_aprovado = "auto_aprovado"
+
+
+class StatusNfeEntradaEnum(str, enum.Enum):
+    aguardando_confirmacao = "aguardando_confirmacao"
+    confirmada = "confirmada"
+    cancelada = "cancelada"
+
+
+class StatusItemNfeEnum(str, enum.Enum):
+    identificado = "identificado"
+    nao_encontrado = "nao_encontrado"
+    cadastrado_automaticamente = "cadastrado_automaticamente"
 
 
 def pg_enum(python_enum: type[enum.Enum], pg_name: str) -> SAEnum:

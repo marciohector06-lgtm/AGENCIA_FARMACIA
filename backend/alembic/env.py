@@ -85,7 +85,19 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            # Migration 0005/0006 (Agente Tributário): Postgres não deixa usar,
+            # na MESMA transação, um valor de enum que acabou de ser
+            # adicionado via ALTER TYPE ... ADD VALUE. Sem isto, um único
+            # `alembic upgrade head` roda TODAS as migrations pendentes numa
+            # única transação (um só context.begin_transaction() por
+            # invocação) — 0006 usar 'tributario' (adicionado na 0005) quebra
+            # com "unsafe use of new value" mesmo estando em arquivos
+            # separados. Com transaction_per_migration=True, cada migration
+            # commita antes da próxima começar, igual rodar cada uma como um
+            # `alembic upgrade` isolado.
+            transaction_per_migration=True,
         )
 
         with context.begin_transaction():

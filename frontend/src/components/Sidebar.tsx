@@ -16,7 +16,8 @@ type IconKey =
   | "clientes"
   | "agente"
   | "auditoria"
-  | "atendimento";
+  | "atendimento"
+  | "notasEntrada";
 
 const ICON_PATHS: Record<IconKey, string> = {
   dashboard: "M4 5h6v6H4V5Zm10 0h6v10h-6V5ZM4 15h6v4H4v-4Z",
@@ -30,6 +31,7 @@ const ICON_PATHS: Record<IconKey, string> = {
   agente: "M12 3v3m0 12v3m9-9h-3M6 12H3m14.5-6.5-2 2m-9 9-2 2m0-13 2 2m9 9 2 2M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z",
   auditoria: "M12 3 4 6v6c0 4.5 3.4 7.7 8 9 4.6-1.3 8-4.5 8-9V6l-8-3Zm-2.5 9 1.8 1.8L14.8 10",
   atendimento: "M4 5h16v10H8l-4 4V5Z",
+  notasEntrada: "M7 3h8l4 4v14H7V3Zm8 0v4h4M9 12h6M9 16h6M9 8h2",
 };
 
 function Icon({ name, ...props }: { name: IconKey } & SVGProps<SVGSVGElement>) {
@@ -75,6 +77,7 @@ const NAV_GROUPS = [
     title: "Agentes de IA",
     items: [
       { href: "/agentes/analise-estoque", label: "Análise de Estoque", icon: "agente" as IconKey },
+      { href: "/notas-entrada", label: "Notas de Entrada", icon: "notasEntrada" as IconKey },
       { href: "/auditoria", label: "Auditoria", icon: "auditoria" as IconKey },
       { href: "/atendimento", label: "Atendimento (Avatar)", icon: "atendimento" as IconKey },
     ],

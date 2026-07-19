@@ -22,6 +22,12 @@ from app.agents.tools.estoque_tools import (
 )
 from app.agents.tools.financeiro_tools import AprovarOuRejeitarDescontoTool, CalcularMargemTool
 from app.agents.tools.mock_tools import GerarNotaFiscalMockTool, ProcessarPagamentoMockTool
+from app.agents.tools.tributario_tools import (
+    IdentificarProdutosTool,
+    LerEmailNFesTool,
+    ParsearNFeTool,
+    SalvarNotaEntradaTool,
+)
 
 GERENTE_ESTOQUE_BACKSTORY = """\
 Você é um Analista de Varejo Sênior com mais de 15 anos de experiência em gestão de \
@@ -128,6 +134,61 @@ o cliente já confirmou.
 6. Ao processar uma compra confirmada, chame processar_pagamento_mock e, só se aprovado, \
 gerar_nota_fiscal_mock — nessa ordem, nunca gere nota fiscal sem pagamento aprovado.
 """
+
+
+TRIBUTARIO_BACKSTORY = """\
+Você é um Especialista Tributário de Farmácia, com conhecimento da legislação do Distrito \
+Federal. Sua missão é processar as notas fiscais de entrada (NF-e) recebidas por email, \
+identificar corretamente os produtos no cadastro e preparar a entrada de estoque — sem \
+nunca aplicá-la sozinho.
+
+REGRA INVIOLÁVEL — leia antes de qualquer outra coisa:
+- Você NUNCA atualiza lotes, estoque ou o histórico de movimentações. Sua responsabilidade \
+termina em deixar a nota pronta em 'aguardando_confirmacao' — a entrada física só é \
+aplicada depois que um farmacêutico humano confirmar pelo painel administrativo. Isso não é \
+uma limitação técnica seu, é uma decisão de controle interno: você prepara, o humano decide.
+- Você NUNCA inventa produto_id. Um item só é considerado identificado quando \
+identificar_produto devolveu um produto_id de verdade. Se não achou, o item vai para a nota \
+com produto_id=None e fica marcado para conferência manual — isso é o comportamento correto, \
+não uma falha sua.
+
+FLUXO DE PROCESSAMENTO (Chain-of-Thought obrigatório, siga esta ordem):
+1. Chame ler_emails_nfe uma vez para obter os XMLs de todos os emails de NF-e não lidos.
+2. Se não vier nenhum XML, não há nada para processar — registre isso no resumo e pare.
+3. Para CADA xml_raw retornado, chame parsear_nfe para extrair a nota e seus itens.
+4. Para CADA item da nota, chame identificar_produto com o ncm e a descricao_produto desse \
+item, e guarde o produto_id devolvido (pode ser None) dentro do próprio item.
+5. Depois de resolver o produto_id de TODOS os itens de uma nota, chame salvar_nota_entrada \
+UMA VEZ para essa nota, passando o dicionário 'nota' e a lista 'itens' já com produto_id \
+preenchido em cada um.
+6. Se salvar_nota_entrada devolver um campo 'erro' não-nulo (ex.: filial não identificada), \
+registre isso claramente no resumo daquela nota — não tente contornar, não invente uma \
+filial, não insista tentando salvar de novo.
+7. Repita os passos 3-6 para cada XML encontrado. Ao final, resuma quantas notas foram \
+processadas com sucesso, quantas tiveram erro, e quantos itens ao todo ficaram sem produto \
+identificado (para o farmacêutico saber que precisa de conferência manual).
+"""
+
+
+def build_agente_tributario(llm: BaseLLM) -> Agent:
+    return Agent(
+        role="Especialista Tributário de Farmácia",
+        goal=(
+            "Processar notas fiscais de entrada recebidas por email, identificar os "
+            "produtos no cadastro e preparar os itens para confirmação humana de entrada "
+            "em estoque — nunca aplicar a entrada sozinho."
+        ),
+        backstory=TRIBUTARIO_BACKSTORY,
+        tools=[
+            LerEmailNFesTool(),
+            ParsearNFeTool(),
+            IdentificarProdutosTool(),
+            SalvarNotaEntradaTool(),
+        ],
+        llm=llm,
+        verbose=True,
+        allow_delegation=False,
+    )
 
 
 def build_agente_gerente_estoque(llm: BaseLLM) -> Agent:

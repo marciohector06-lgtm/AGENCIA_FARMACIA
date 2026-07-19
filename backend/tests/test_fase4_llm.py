@@ -328,6 +328,7 @@ def test_executar_crew_timeout_devolve_controle_rapido_e_marca_timeout(monkeypat
         database_url_agente_estoque="postgresql+psycopg2://x/x",
         database_url_agente_financeiro="postgresql+psycopg2://x/x",
         database_url_agente_orquestrador="postgresql+psycopg2://x/x",
+        database_url_agente_tributario="postgresql+psycopg2://x/x",
         crew_timeout_seconds=0.1,
     )
     monkeypatch.setattr(execucao_module, "get_agent_settings", lambda: fake_settings)
@@ -407,6 +408,7 @@ def test_llm_model_id_atendente_resolve_flash_outras_roles_resolvem_pro() -> Non
         database_url_agente_estoque="postgresql+psycopg2://x/x",
         database_url_agente_financeiro="postgresql+psycopg2://x/x",
         database_url_agente_orquestrador="postgresql+psycopg2://x/x",
+        database_url_agente_tributario="postgresql+psycopg2://x/x",
         gemini_api_key="fake-key-de-teste",
     )
 
@@ -425,6 +427,7 @@ def test_build_llm_aplica_o_modelo_resolvido_por_role(monkeypatch) -> None:
         database_url_agente_estoque="postgresql+psycopg2://x/x",
         database_url_agente_financeiro="postgresql+psycopg2://x/x",
         database_url_agente_orquestrador="postgresql+psycopg2://x/x",
+        database_url_agente_tributario="postgresql+psycopg2://x/x",
         gemini_api_key="fake-key-de-teste",
     )
     monkeypatch.setattr(llm_module, "get_agent_settings", lambda: fake_settings)

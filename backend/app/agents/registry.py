@@ -14,6 +14,7 @@ ROLE_TO_TIPO_AGENTE: dict[AgentRole, TipoAgenteEnum] = {
     AgentRole.GERENTE_ESTOQUE: TipoAgenteEnum.gerente_estoque,
     AgentRole.FINANCEIRO: TipoAgenteEnum.financeiro,
     AgentRole.ORQUESTRADOR: TipoAgenteEnum.orquestrador,
+    AgentRole.TRIBUTARIO: TipoAgenteEnum.tributario,
 }
 
 # LLM-09: lru_cache (sem maxsize e sem expiração) mantinha o id do agente em

@@ -209,3 +209,61 @@ export interface ChatAtendimentoResponse {
   // CLIN-06: texto fixo, gerado deterministicamente pelo backend (nunca pelo LLM).
   disclaimer: string;
 }
+
+// Agente Tributário (Bloco 1): leitura de NF-e por email + confirmação manual de entrada.
+export type StatusNfeEntrada = "aguardando_confirmacao" | "confirmada" | "cancelada";
+export type StatusItemNfe = "identificado" | "nao_encontrado" | "cadastrado_automaticamente";
+
+export interface NotaFiscalEntrada {
+  id: string;
+  filial_id: string;
+  chave_acesso: string;
+  numero_nota: string;
+  serie: string;
+  cnpj_emitente: string;
+  nome_emitente: string;
+  data_emissao: string;
+  valor_total: number;
+  status: StatusNfeEntrada;
+  recebido_em: string;
+  confirmado_em: string | null;
+  confirmado_por_operador_id: string | null;
+}
+
+export interface NotaFiscalEntradaItem {
+  id: string;
+  produto_id: string | null;
+  ncm: string;
+  descricao_produto: string;
+  numero_lote: string | null;
+  data_validade: string | null;
+  quantidade: number;
+  custo_unitario: number;
+  valor_total_item: number;
+  v_icms_st: number;
+  p_pis: number;
+  v_pis: number;
+  p_cofins: number;
+  v_cofins: number;
+  lote_criado_id: string | null;
+  status_produto: StatusItemNfe;
+}
+
+export interface NotaFiscalEntradaDetalhe extends NotaFiscalEntrada {
+  itens: NotaFiscalEntradaItem[];
+}
+
+export interface ConfirmarEntradaResponse {
+  nota_id: string;
+  lotes_criados: number;
+  lotes_atualizados: number;
+  itens_ignorados: number;
+  valor_total_entrada: number;
+  log_auditoria_id: string;
+}
+
+export interface ProcessarNFeEmailResponse {
+  notas_processadas: number;
+  resumo: string;
+  log_auditoria_id: string | null;
+}
