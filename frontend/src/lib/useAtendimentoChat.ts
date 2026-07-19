@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, ApiError, ApiTimeoutError } from "@/lib/api";
+import { api, ApiError, ApiTimeoutError, postComRetryEmTimeout } from "@/lib/api";
 import { useReconhecimentoVoz, useSintese } from "@/lib/useVoz";
 import { ChatAtendimentoResponse, Cliente, ProdutoSugerido } from "@/lib/types";
 
@@ -155,7 +155,11 @@ export function useAtendimentoChat({ filialIdFixa, onVendaConfirmada }: UseAtend
     setLoading(true);
 
     try {
-      const resp = await api.post<ChatAtendimentoResponse>("/chat/atendimento", {
+      // Retry único em timeout do cliente (ver postComRetryEmTimeout em
+      // api.ts) — o crew pode legitimamente levar perto do limite do
+      // timeout, uma segunda tentativa antes de mostrar erro evita um falso
+      // negativo por uma resposta só um pouco mais lenta que o normal.
+      const resp = await postComRetryEmTimeout<ChatAtendimentoResponse>("/chat/atendimento", {
         sessao_id: sessaoId,
         filial_id: filialId,
         cliente_id: clienteId || undefined,
@@ -188,7 +192,11 @@ export function useAtendimentoChat({ filialIdFixa, onVendaConfirmada }: UseAtend
     setLoading(true);
     setErro(null);
     try {
-      const resp = await api.post<ChatAtendimentoResponse>("/chat/atendimento", {
+      // Retry seguro aqui mesmo mutando uma venda: o backend protege por
+      // idempotency_key (sessão + produto + lote + quantidade — ver
+      // _idempotency_key_venda em service.py), uma segunda tentativa idêntica
+      // nunca duplica a compra.
+      const resp = await postComRetryEmTimeout<ChatAtendimentoResponse>("/chat/atendimento", {
         sessao_id: sessaoId,
         filial_id: filialId,
         cliente_id: clienteId || undefined,

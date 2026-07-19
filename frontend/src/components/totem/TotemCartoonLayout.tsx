@@ -9,7 +9,7 @@ import { TotemLayoutProps } from "./types";
 
 const LABEL_ESTADO: Partial<Record<EstadoAvatar, string>> = {
   ouvindo: "Ouvindo...",
-  pensando: "Pensando...",
+  pensando: "A Ana está analisando... isso pode levar alguns segundos",
   falando: "Falando...",
 };
 

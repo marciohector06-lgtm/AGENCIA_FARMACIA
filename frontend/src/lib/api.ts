@@ -16,9 +16,10 @@ export function clearToken(): void {
 
 // LLM-05: sem isso um crew.kickoff() lento no backend deixa o cliente
 // esperando indefinidamente, sem nenhum feedback — o backend já tem seu
-// próprio timeout (CREW_TIMEOUT_SECONDS), mas o fetch do navegador não tem
-// limite embutido nenhum.
-const REQUEST_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_REQUEST_TIMEOUT_MS ?? 100000);
+// próprio timeout (CREW_TIMEOUT_SECONDS=40, pior caso 80s com as 2
+// tentativas do LLM-04), mas o fetch do navegador não tem limite embutido
+// nenhum. 120s dá folga sobre esse pior caso mais a latência de rede.
+const REQUEST_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_REQUEST_TIMEOUT_MS ?? 120000);
 
 export class ApiError extends Error {
   status: number;
@@ -141,3 +142,22 @@ export const api = {
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
   delete: (path: string) => request<void>(path, { method: "DELETE" }),
 };
+
+// Retry único e só em timeout do CLIENTE (ApiTimeoutError — o fetch abortou
+// sem saber se o backend chegou a responder), nunca em ApiError (a resposta
+// chegou, foi um erro de verdade, tentar de novo não muda nada). Usado só no
+// POST /chat/atendimento (ver useAtendimentoChat.ts) — não é um helper
+// genérico pra todo POST porque nem toda mutação tem uma idempotency_key
+// como a confirmação de compra tem (ver _idempotency_key_venda no backend);
+// retentar um POST sem proteção de idempotência arriscaria duplicar a ação
+// se a primeira tentativa na verdade tiver terminado no servidor.
+export async function postComRetryEmTimeout<T>(path: string, body: unknown): Promise<T> {
+  try {
+    return await api.post<T>(path, body);
+  } catch (err) {
+    if (err instanceof ApiTimeoutError) {
+      return await api.post<T>(path, body);
+    }
+    throw err;
+  }
+}

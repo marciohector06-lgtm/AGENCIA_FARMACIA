@@ -239,6 +239,17 @@ def build_agente_financeiro(llm: BaseLLM) -> Agent:
     )
 
 
+# LAT-01 (tentativa revertida — ver commit/histórico): tanto max_iter=7
+# quanto separar as tools por fluxo (pesquisa vs confirmação) pareciam
+# otimizações seguras, mas testado ao vivo contra o Gemini de produção,
+# CADA UMA isoladamente fez o agente ocasionalmente pular a busca e devolver
+# uma pergunta de esclarecimento genérica ("Olá! Como posso ajudar...") em
+# vez de seguir o fluxo de atendimento — inclusive violando a regra de "sem
+# saudação". A única combinação que reproduziu 100% correta em todos os
+# testes foi max_iter no default do CrewAI (25) com as 8 tools originais
+# juntas. Mantido assim até haver uma forma de reduzir latência sem trocar
+# esse comportamento (ex.: consolidar tools em uma única chamada
+# server-side, em vez de reduzir o que o agente tem disponível).
 def build_agente_atendente(llm: BaseLLM) -> Agent:
     return Agent(
         role="Farmacêutico Clínico — Atendimento ao Cliente",
