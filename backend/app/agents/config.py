@@ -21,7 +21,19 @@ class AgentSettings(BaseSettings):
     database_url_agente_estoque: str
     database_url_agente_financeiro: str
     database_url_agente_orquestrador: str
-    database_url_agente_tributario: str
+    # Único DATABASE_URL_* sem valor obrigatório: ao contrário das 4 roles
+    # acima (existem desde a FASE 1, sempre configuradas), esta só passou a
+    # existir com o Agente Tributário e o Render nunca teve
+    # DATABASE_URL_AGENTE_TRIBUTARIO preenchida (fica em branco até alguém
+    # configurar manualmente, "sync: false" no render.yaml) — como
+    # AgentSettings é compartilhada por TODOS os agentes, um campo
+    # obrigatório vazio derrubava a instanciação inteira (inclusive o
+    # Atendente) com "Field required" em vez de só o Tributário falhar
+    # (reproduzido ao vivo em produção, apagão do /chat/atendimento em
+    # 2026-07-19). Vazio por padrão, mesmo padrão de nfe_email_host — só o
+    # Agente Tributário em si falha cedo (agent_session/db_sync.py) se for
+    # de fato invocado sem isso configurado.
+    database_url_agente_tributario: str = ""
 
     # Mesma flag usada pelo backend (app/core/config.py): Supabase exige TLS em
     # conexão direta, mas um Postgres local de desenvolvimento normalmente não
