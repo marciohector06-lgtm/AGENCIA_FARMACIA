@@ -625,8 +625,9 @@ def _run_atendimento_pesquisa(request: ChatAtendimentoRequest, sessao_id: uuid.U
                 "invente produto_id — use somente os que vieram das ferramentas de busca."
             ),
             expected_output=(
-                "Uma resposta simpática ao cliente e a lista de produtos realmente sugeridos, com "
-                "produto_id, nome, disponibilidade, preço e o motivo da sugestão."
+                "Uma resposta simpática ao cliente, SEM saudação ou apresentação inicial (o cliente já "
+                "vê o avatar na tela), e a lista de produtos realmente sugeridos, com produto_id, nome, "
+                "disponibilidade, preço e o motivo da sugestão."
             ),
             agent=agente,
             output_pydantic=RespostaAtendimentoOutput,
@@ -1063,9 +1064,13 @@ def _run_atendimento_confirmacao(request: ChatAtendimentoRequest, sessao_id: uui
                 f"O cliente confirmou a compra do produto '{produto['nome_comercial']}', "
                 f"quantidade {request.quantidade}, valor total R${valor_total:.2f}. Processe o pagamento com "
                 "processar_pagamento_mock e, somente se aprovado, gere a nota fiscal com "
-                "gerar_nota_fiscal_mock. Responda de forma simpática confirmando (ou não) a compra."
+                "gerar_nota_fiscal_mock. Responda de forma simpática confirmando (ou não) a compra, SEM "
+                "saudação ou apresentação inicial (o cliente já vê o avatar na tela)."
             ),
-            expected_output="Confirmação estruturada com sucesso, transacao_id, nfe_chave e uma resposta simpática.",
+            expected_output=(
+                "Confirmação estruturada com sucesso, transacao_id, nfe_chave e uma resposta simpática, "
+                "sem saudação/apresentação inicial."
+            ),
             agent=agente,
             output_pydantic=ConfirmacaoCompraOutput,
         )
