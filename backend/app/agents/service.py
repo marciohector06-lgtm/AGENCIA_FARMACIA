@@ -393,6 +393,14 @@ def _buscar_produto_basico(produto_id: uuid.UUID) -> dict[str, Any] | None:
         return dict(row._mapping) if row else None
 
 
+def _principio_ativo_existe(principio_ativo_id: uuid.UUID) -> bool:
+    with agent_session(AgentRole.ATENDENTE) as session:
+        row = session.execute(
+            text("SELECT 1 FROM principios_ativos WHERE id = :id"), {"id": str(principio_ativo_id)}
+        ).first()
+        return row is not None
+
+
 def _buscar_lote_disponivel(produto_id: uuid.UUID, filial_id: uuid.UUID, quantidade: int) -> uuid.UUID | None:
     """FEFO correto (CLIN-01/CLIN-02): a view já filtra status='disponivel' e
     data_validade >= CURRENT_DATE (migration 0022) — os mesmos filtros
@@ -712,13 +720,22 @@ def _run_atendimento_pesquisa(request: ChatAtendimentoRequest, sessao_id: uuid.U
 
     tipo_decisao = TipoDecisaoEnum.sugestao_similar if produtos_validados else TipoDecisaoEnum.alerta_estoque
     # Só usado pra referência no log de auditoria (nunca chega ao cliente) —
-    # um principio_ativo_id alucinado pelo LLM (não-UUID) não pode derrubar a
-    # resposta inteira, mesmo tratamento de "descarta e segue" do produto_id
-    # acima, só que aqui não há nem cliente pra avisar do descarte.
+    # um principio_ativo_id alucinado pelo LLM não pode derrubar a resposta
+    # inteira, mesmo tratamento de "descarta e segue" do produto_id acima, só
+    # que aqui não há nem cliente pra avisar do descarte. Formato de UUID não
+    # basta (reproduzido ao vivo: LLM devolveu um UUID sintaticamente válido
+    # mas inexistente em principios_ativos, e o INSERT em logs_auditoria
+    # quebrava com ForeignKeyViolation) — precisa existir de verdade na
+    # tabela, mesmo padrão de _validar_produto_sugerido pra produto_id.
     try:
-        principio_ativo_id = uuid.UUID(saida.principio_ativo_id) if saida.principio_ativo_id else None
+        principio_ativo_id_candidato = uuid.UUID(saida.principio_ativo_id) if saida.principio_ativo_id else None
     except (ValueError, AttributeError, TypeError):
-        principio_ativo_id = None
+        principio_ativo_id_candidato = None
+    principio_ativo_id = (
+        principio_ativo_id_candidato
+        if principio_ativo_id_candidato and _principio_ativo_existe(principio_ativo_id_candidato)
+        else None
+    )
     log_id = registrar_auditoria(
         role=AgentRole.ATENDENTE,
         tipo_decisao=tipo_decisao,
